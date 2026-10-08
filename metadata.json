@@ -1,0 +1,6 @@
+{
+  "name": "FlickPad",
+  "description": "Radial controller text input and cursor control overlay with customizable profiles and gamepad mapping.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
