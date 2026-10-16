@@ -13,70 +13,70 @@ val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
+        fontSize = 34.sp,
         letterSpacing = 0.5.sp
     ),
     displayMedium = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
+        fontSize = 28.sp,
         letterSpacing = 0.5.sp
     ),
     titleLarge = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Bold,
-        fontSize = 20.sp,
+        fontSize = 22.sp,
         letterSpacing = 0.5.sp
     ),
     titleMedium = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Bold,
-        fontSize = 17.sp,
+        fontSize = 18.5.sp,
         letterSpacing = 0.5.sp
     ),
     titleSmall = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
+        fontSize = 15.5.sp,
         letterSpacing = 0.5.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Normal,
-        fontSize = 15.sp,
-        lineHeight = 22.sp,
+        fontSize = 16.5.sp,
+        lineHeight = 23.sp,
         letterSpacing = 0.3.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
+        fontSize = 14.5.sp,
+        lineHeight = 19.sp,
         letterSpacing = 0.2.sp
     ),
     bodySmall = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        lineHeight = 15.sp,
+        fontSize = 12.5.sp,
+        lineHeight = 16.5.sp,
         letterSpacing = 0.2.sp
     ),
     labelLarge = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Bold,
-        fontSize = 13.sp,
+        fontSize = 14.5.sp,
         letterSpacing = 0.5.sp
     ),
     labelMedium = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
+        fontSize = 12.5.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
         fontFamily = TerminalMonospace,
         fontWeight = FontWeight.Normal,
-        fontSize = 10.sp,
+        fontSize = 11.5.sp,
         letterSpacing = 0.5.sp
     )
 )

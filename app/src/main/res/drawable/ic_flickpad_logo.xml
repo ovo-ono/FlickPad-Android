@@ -1,0 +1,93 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Transparent Background: No background element -->
+
+    <!-- Top North Sector (12 o'clock) Highlighted in Terminal Green (#00FF66) -->
+    <path
+        android:fillColor="#3300FF66"
+        android:strokeColor="#00FF66"
+        android:strokeWidth="2.2"
+        android:strokeLineJoin="round"
+        android:pathData="M 45.58,33.67 L 37.93,15.20 A 42,42 0 0,1 70.07,15.20 L 62.42,33.67 A 22,22 0 0,0 45.58,33.67 Z" />
+
+    <!-- Top North Sector Alignment Indicator Tick -->
+    <path
+        android:strokeColor="#00FF66"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 54,6 L 54,12" />
+
+    <!-- Outer Concentric Circle (Radius 42, Warm Amber #FFB300) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="2.2"
+        android:pathData="M 54,12 A 42,42 0 1,1 53.99,12 Z" />
+
+    <!-- Inner Concentric Circle (Radius 22, Warm Amber #FFB300) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="2.0"
+        android:pathData="M 54,32 A 22,22 0 1,1 53.99,32 Z" />
+
+    <!-- 8 Dividing Spoke Lines (45° apart) -->
+    <!-- Spoke 1: 22.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 74.33,62.42 L 92.80,70.07" />
+
+    <!-- Spoke 2: 67.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 62.42,74.33 L 70.07,92.80" />
+
+    <!-- Spoke 3: 112.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 45.58,74.33 L 37.93,92.80" />
+
+    <!-- Spoke 4: 157.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 33.67,62.42 L 15.20,70.07" />
+
+    <!-- Spoke 5: 202.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 33.67,45.58 L 15.20,37.93" />
+
+    <!-- Spoke 6: 247.5° (Left boundary of top North sector, Terminal Green) -->
+    <path
+        android:strokeColor="#00FF66"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M 45.58,33.67 L 37.93,15.20" />
+
+    <!-- Spoke 7: 292.5° (Right boundary of top North sector, Terminal Green) -->
+    <path
+        android:strokeColor="#00FF66"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M 62.42,33.67 L 70.07,15.20" />
+
+    <!-- Spoke 8: 337.5° (Warm Amber) -->
+    <path
+        android:strokeColor="#FFB300"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:pathData="M 74.33,45.58 L 92.80,37.93" />
+
+</vector>

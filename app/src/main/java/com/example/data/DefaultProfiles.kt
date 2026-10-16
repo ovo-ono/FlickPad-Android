@@ -208,8 +208,8 @@ object DefaultProfiles {
 
         return listOf(
             ProfileEntity(
-                name = "Standard 9-Zone MessagEase",
-                description = "ThumbKey / FlickBoard inspired layout with 9 zones & 8 radial characters.",
+                name = "Custom Default",
+                description = "Primary immutable profile containing full layouts, cursor and thumbstick settings, and button combinations.",
                 isDefault = true,
                 mode = "TEXT_INPUT",
                 leftDeadzone = 0.22f,

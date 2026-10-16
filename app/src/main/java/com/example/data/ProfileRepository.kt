@@ -27,6 +27,8 @@ class ProfileRepository(private val profileDao: ProfileDao) {
         if (existing == null) {
             val list = DefaultProfiles.createInitialProfiles()
             list.forEach { profileDao.insert(it) }
+        } else if (existing.name == "Standard 9-Zone MessagEase") {
+            profileDao.update(existing.copy(name = "Custom Default", description = "Primary immutable profile containing full layouts, cursor and thumbstick settings, and button combinations."))
         }
     }
 

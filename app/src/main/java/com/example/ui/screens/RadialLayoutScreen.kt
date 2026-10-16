@@ -322,8 +322,9 @@ fun RadialLayoutScreen(
                 Text(
                     text = "Modifier Layer (shows & edits modified symbols):",
                     fontSize = 11.5.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
+                    color = TerminalAmber,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = FontFamily.Monospace
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -349,7 +350,7 @@ fun RadialLayoutScreen(
                                 selectedContainerColor = Color.Black,
                                 selectedLabelColor = TerminalGreen,
                                 containerColor = Color.Black,
-                                labelColor = TerminalAmber.copy(alpha = 0.6f)
+                                labelColor = TerminalAmber
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
@@ -375,7 +376,7 @@ fun RadialLayoutScreen(
             color = Color.Black,
             border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
+            Column(modifier = Modifier.padding(2.dp)) {
                 FlickBoardGridView(
                     zones = parsedZones,
                     activeZoneIndex = enlargedZoneIndex ?: 0,
@@ -473,7 +474,7 @@ fun RadialLayoutScreen(
                                         text = action.title,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isAssigned) TerminalGreen else TerminalAmber.copy(alpha = 0.6f),
+                                        color = if (isAssigned) TerminalGreen else TerminalAmber,
                                         fontFamily = FontFamily.Monospace
                                     )
                                 }
@@ -510,16 +511,16 @@ fun RadialLayoutScreen(
     if (showAddLayoutDialog) {
         AlertDialog(
             onDismissRequest = { showAddLayoutDialog = false },
-            title = { Text("Add New Layout") },
+            title = { Text("Add New Layout", color = TerminalAmber, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Enter name for the new keyboard layout slot:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Enter name for the new keyboard layout slot:", fontSize = 12.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = newLayoutName,
                         onValueChange = { newLayoutName = it },
                         singleLine = true,
-                        label = { Text("Layout Name") },
+                        label = { Text("Layout Name", fontFamily = FontFamily.Monospace) },
                         modifier = Modifier.fillMaxWidth().testTag("input_new_layout_name")
                     )
                 }
@@ -532,12 +533,12 @@ fun RadialLayoutScreen(
                     },
                     modifier = Modifier.testTag("button_confirm_add_layout")
                 ) {
-                    Text("Create")
+                    Text("Create", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddLayoutDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -547,16 +548,16 @@ fun RadialLayoutScreen(
     if (showRenameLayoutDialog) {
         AlertDialog(
             onDismissRequest = { showRenameLayoutDialog = false },
-            title = { Text("Rename Layout") },
+            title = { Text("Rename Layout", color = TerminalAmber, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Enter a new name for layout $activeLayoutId:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Enter a new name for layout $activeLayoutId:", fontSize = 12.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = renameLayoutName,
                         onValueChange = { renameLayoutName = it },
                         singleLine = true,
-                        label = { Text("New Name") },
+                        label = { Text("New Name", fontFamily = FontFamily.Monospace) },
                         modifier = Modifier.fillMaxWidth().testTag("input_rename_layout")
                     )
                 }
@@ -571,12 +572,12 @@ fun RadialLayoutScreen(
                     },
                     modifier = Modifier.testTag("button_confirm_rename_layout")
                 ) {
-                    Text("Save")
+                    Text("Save", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameLayoutDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -586,10 +587,10 @@ fun RadialLayoutScreen(
     if (showExportLayoutsDialog) {
         AlertDialog(
             onDismissRequest = { showExportLayoutsDialog = false },
-            title = { Text("Export Layouts JSON") },
+            title = { Text("Export Layouts JSON", color = TerminalAmber, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Cross-platform layout JSON:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Cross-platform layout JSON:", fontSize = 12.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = exportedLayoutsJson,
@@ -602,7 +603,7 @@ fun RadialLayoutScreen(
             },
             confirmButton = {
                 Button(onClick = { showExportLayoutsDialog = false }) {
-                    Text("Done")
+                    Text("Done", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -612,17 +613,17 @@ fun RadialLayoutScreen(
     if (showImportLayoutsDialog) {
         AlertDialog(
             onDismissRequest = { showImportLayoutsDialog = false },
-            title = { Text("Import Layouts JSON") },
+            title = { Text("Import Layouts JSON", color = TerminalAmber, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Paste layouts JSON to import:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+                    Text("Paste layouts JSON to import:", fontSize = 12.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = importLayoutsJsonText,
                         onValueChange = { importLayoutsJsonText = it },
                         modifier = Modifier.fillMaxWidth().height(180.dp),
                         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        placeholder = { Text("Paste JSON here...") }
+                        placeholder = { Text("Paste JSON here...", fontFamily = FontFamily.Monospace) }
                     )
                 }
             },
@@ -751,7 +752,7 @@ fun RadialLayoutScreen(
                                         fontSize = 11.sp,
                                         maxLines = 1,
                                         fontFamily = FontFamily.Monospace,
-                                        color = if (isTabSel) TerminalGreen else TerminalAmber.copy(alpha = 0.6f)
+                                        color = if (isTabSel) TerminalGreen else TerminalAmber
                                     )
                                 }
                             )

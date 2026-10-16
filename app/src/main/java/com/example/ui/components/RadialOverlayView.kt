@@ -27,7 +27,7 @@ fun RadialOverlayView(
             .fillMaxWidth()
             .scale(scale.coerceIn(0.6f, 1.5f))
             .alpha(opacity.coerceIn(0.2f, 1.0f))
-            .padding(4.dp),
+            .padding(1.dp),
         contentAlignment = Alignment.Center
     ) {
         FlickBoardGridView(

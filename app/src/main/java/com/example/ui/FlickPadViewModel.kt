@@ -30,12 +30,51 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import android.provider.Settings
+import android.view.MotionEvent
+import com.example.service.FlickPadAccessibilityService
+import com.example.service.FlickPadOverlayService
+
 class FlickPadViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        var activeInstance: FlickPadViewModel? = null
+            private set
+    }
+
+    init {
+        activeInstance = this
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        if (activeInstance == this) {
+            activeInstance = null
+        }
+    }
 
     private val repository = (application as FlickPadApplication).repository
     private val vibrator = application.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
     private val clipboardManager = application.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     val gamepadManager = GamepadDeviceManager(application)
+
+    // Dynamic full-screen metrics
+    private val _screenWidth = MutableStateFlow(
+        application.resources.displayMetrics.widthPixels.toFloat().coerceAtLeast(720f)
+    )
+    val screenWidth: StateFlow<Float> = _screenWidth.asStateFlow()
+
+    private val _screenHeight = MutableStateFlow(
+        application.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1280f)
+    )
+    val screenHeight: StateFlow<Float> = _screenHeight.asStateFlow()
+
+    fun updateScreenDimensions(width: Float, height: Float) {
+        if (width > 50f && height > 50f) {
+            _screenWidth.value = width
+            _screenHeight.value = height
+        }
+    }
 
     // Profiles from Room DB
     val allProfiles: StateFlow<List<ProfileEntity>> = repository.allProfiles.stateIn(
@@ -130,7 +169,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     val activeModifierLayer: StateFlow<String> = _activeModifierLayer.asStateFlow()
 
     // Cached parsed zones & mappings
-    private val _parsedZones = MutableStateFlow<List<ZoneData>>(emptyList())
+    private val _parsedZones = MutableStateFlow<List<ZoneData>>(DefaultProfiles.jsonToZones(DefaultProfiles.getDefaultZonesJson()))
     val parsedZones: StateFlow<List<ZoneData>> = _parsedZones.asStateFlow()
 
     private val _parsedMappings = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -163,7 +202,48 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    // Mode switch toast popup stylized as [off], [text_input], [cursor]
+    private var modeToastJob: Job? = null
+    private val _modeToast = MutableStateFlow<String?>(null)
+    val modeToast: StateFlow<String?> = _modeToast.asStateFlow()
+
+    fun triggerModeToast(mode: String) {
+        modeToastJob?.cancel()
+        val text = when (mode) {
+            "OFF" -> "[off]"
+            "TEXT_INPUT" -> "[text_input]"
+            "CURSOR_CONTROL" -> "[cursor]"
+            else -> "[${mode.lowercase()}]"
+        }
+        _modeToast.value = text
+        FlickPadOverlayService.showModeToast(text)
+        modeToastJob = viewModelScope.launch {
+            delay(1200)
+            _modeToast.value = null
+        }
+    }
+
+    fun notifyOverlayHudUpdate() {
+        val activeLayout = _allLayouts.value.firstOrNull { it.id == _activeLayoutId.value }
+        val layoutName = activeLayout?.name ?: "Default"
+        FlickPadOverlayService.updateHudData(
+            _parsedZones.value,
+            _activeZoneIndex.value,
+            _armedSectorIndex.value,
+            layoutName
+        )
+    }
+
+    fun requestOverlayHudSync() {
+        notifyOverlayHudUpdate()
+    }
+
     init {
+        activeInstance = this
+        val app = getApplication<Application>()
+        if (Settings.canDrawOverlays(app)) {
+            FlickPadOverlayService.start(app)
+        }
         viewModelScope.launch {
             allProfiles.collect { profiles ->
                 if (_currentProfile.value == null && profiles.isNotEmpty()) {
@@ -201,7 +281,12 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
 
         if (_activeMode.value == "TEXT_INPUT") {
             _overlayVisible.value = true
+            FlickPadOverlayService.setHudVisibility(true)
+        } else if (_activeMode.value == "CURSOR_CONTROL") {
+            FlickPadOverlayService.setCursorVisibility(true)
+            FlickPadOverlayService.updateCursorPosition(_cursorX.value, _cursorY.value)
         }
+        notifyOverlayHudUpdate()
         resetAutoHideTimer()
     }
 
@@ -232,11 +317,13 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         autoHideJob?.cancel()
         if (_activeMode.value == "TEXT_INPUT") {
             _overlayVisible.value = true
+            FlickPadOverlayService.setHudVisibility(true)
             val seconds = _currentProfile.value?.overlayAutoHideSeconds ?: 0f
             if (seconds > 0f) {
                 autoHideJob = viewModelScope.launch {
                     delay((seconds * 1000).toLong())
                     _overlayVisible.value = false
+                    FlickPadOverlayService.setHudVisibility(false)
                 }
             }
         }
@@ -250,33 +337,18 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         _leftStickY.value = y
         resetAutoHideTimer()
 
-        val profile = _currentProfile.value ?: return
-        val deadzone = profile.leftDeadzone
+        val profile = _currentProfile.value
+        val deadzone = profile?.leftDeadzone ?: 0.15f
 
         if (_activeMode.value == "TEXT_INPUT") {
             val newZone = RadialEngine.getZoneFromStick(x, y, deadzone)
             if (newZone != _activeZoneIndex.value) {
                 _activeZoneIndex.value = newZone
                 triggerHaptic(15)
+                notifyOverlayHudUpdate()
             }
         } else if (_activeMode.value == "CURSOR_CONTROL") {
-            if (profile.leftStickMoveCursor) {
-                val curve = try {
-                    CursorAccelerationCurve.valueOf(profile.mouseAccelerationCurve)
-                } catch (_: Exception) {
-                    CursorAccelerationCurve.EXPONENTIAL
-                }
-                val (dx, dy) = CursorEngine.computeMovementDelta(x, y, deadzone, profile.mouseSensitivity, curve)
-                _cursorX.value = (_cursorX.value + dx).coerceIn(10f, 950f)
-                _cursorY.value = (_cursorY.value + dy).coerceIn(10f, 1800f)
-            } else {
-                // Radial 8-directional actions
-                val sector = RadialEngine.getSectorFromStick(x, y, deadzone)
-                if (sector != null) {
-                    val actionName = _leftStickRadialActions.value.getOrNull(sector) ?: "None"
-                    executeRadialDirectionAction(actionName)
-                }
-            }
+            updateCursorOrZoom(profile)
         }
     }
 
@@ -285,8 +357,8 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         _rightStickY.value = y
         resetAutoHideTimer()
 
-        val profile = _currentProfile.value ?: return
-        val deadzone = profile.rightDeadzone
+        val profile = _currentProfile.value
+        val deadzone = profile?.rightDeadzone ?: 0.15f
 
         if (_activeMode.value == "TEXT_INPUT") {
             val sector = RadialEngine.getSectorFromStick(x, y, deadzone)
@@ -294,6 +366,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
                 if (_armedSectorIndex.value != sector) {
                     _armedSectorIndex.value = sector
                     triggerHaptic(20)
+                    notifyOverlayHudUpdate()
                 }
             } else {
                 // Flick released!
@@ -301,27 +374,131 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
                 if (armed != null) {
                     commitFlick(armed)
                     _armedSectorIndex.value = null
+                    notifyOverlayHudUpdate()
                 }
             }
         } else if (_activeMode.value == "CURSOR_CONTROL") {
-            if (profile.rightStickMoveCursor) {
-                val curve = try {
-                    CursorAccelerationCurve.valueOf(profile.mouseAccelerationCurve)
-                } catch (_: Exception) {
-                    CursorAccelerationCurve.EXPONENTIAL
+            updateCursorOrZoom(profile)
+        }
+    }
+
+    private fun updateCursorOrZoom(profile: ProfileEntity?) {
+        if (profile == null) return
+        val lx = _leftStickX.value
+        val ly = _leftStickY.value
+        val rx = _rightStickX.value
+        val ry = _rightStickY.value
+
+        val leftMovesCursor = profile.leftStickMoveCursor
+        val rightMovesCursor = profile.rightStickMoveCursor
+
+        // If both sticks are set to Move Cursor, check for opposite horizontal motion (trackpad pinch zoom)
+        if (leftMovesCursor && rightMovesCursor) {
+            val lDead = profile.leftDeadzone
+            val rDead = profile.rightDeadzone
+            val isLeftDeflected = Math.abs(lx) > lDead
+            val isRightDeflected = Math.abs(rx) > rDead
+
+            if (isLeftDeflected && isRightDeflected) {
+                // Left Stick Leftward (lx < -lDead) + Right Stick Rightward (rx > rDead) => Zoom In
+                if (lx < -lDead && rx > rDead) {
+                    val factor = ((-lx - lDead) + (rx - rDead)) * 0.02f
+                    _zoomLevel.value = (_zoomLevel.value + factor).coerceIn(0.5f, 3.0f)
+                    showStatus("Zoom In: ${(_zoomLevel.value * 100).toInt()}%")
+                    return
                 }
-                val (dx, dy) = CursorEngine.computeMovementDelta(x, y, deadzone, profile.mouseSensitivity, curve)
-                _cursorX.value = (_cursorX.value + dx).coerceIn(10f, 950f)
-                _cursorY.value = (_cursorY.value + dy).coerceIn(10f, 1800f)
-            } else {
-                // Radial 8-directional actions
-                val sector = RadialEngine.getSectorFromStick(x, y, deadzone)
-                if (sector != null) {
-                    val actionName = _rightStickRadialActions.value.getOrNull(sector) ?: "None"
-                    executeRadialDirectionAction(actionName)
+                // Left Stick Rightward (lx > lDead) + Right Stick Leftward (rx < -rDead) => Zoom Out
+                if (lx > lDead && rx < -rDead) {
+                    val factor = ((lx - lDead) + (-rx - rDead)) * 0.02f
+                    _zoomLevel.value = (_zoomLevel.value - factor).coerceIn(0.5f, 3.0f)
+                    showStatus("Zoom Out: ${(_zoomLevel.value * 100).toInt()}%")
+                    return
                 }
             }
         }
+
+        val curve = try {
+            CursorAccelerationCurve.valueOf(profile.mouseAccelerationCurve)
+        } catch (_: Exception) {
+            CursorAccelerationCurve.EXPONENTIAL
+        }
+
+        var totalDx = 0f
+        var totalDy = 0f
+
+        if (leftMovesCursor) {
+            val (dx, dy) = CursorEngine.computeMovementDelta(lx, ly, profile.leftDeadzone, profile.mouseSensitivity, curve)
+            totalDx += dx
+            totalDy += dy
+        } else {
+            val sector = RadialEngine.getSectorFromStick(lx, ly, profile.leftDeadzone)
+            if (sector != null) {
+                val actionName = _leftStickRadialActions.value.getOrNull(sector) ?: "None"
+                executeRadialDirectionAction(actionName)
+            }
+        }
+
+        if (rightMovesCursor) {
+            val (dx, dy) = CursorEngine.computeMovementDelta(rx, ry, profile.rightDeadzone, profile.mouseSensitivity, curve)
+            totalDx += dx
+            totalDy += dy
+        } else {
+            val sector = RadialEngine.getSectorFromStick(rx, ry, profile.rightDeadzone)
+            if (sector != null) {
+                val actionName = _rightStickRadialActions.value.getOrNull(sector) ?: "None"
+                executeRadialDirectionAction(actionName)
+            }
+        }
+
+        if (totalDx != 0f || totalDy != 0f) {
+            val prevX = _cursorX.value
+            val prevY = _cursorY.value
+            val newX = (prevX + totalDx).coerceIn(0f, _screenWidth.value)
+            val newY = (prevY + totalDy).coerceIn(0f, _screenHeight.value)
+            _cursorX.value = newX
+            _cursorY.value = newY
+            FlickPadOverlayService.updateCursorPosition(newX, newY)
+
+            if (_isLeftMouseDown.value) {
+                FlickPadAccessibilityService.drag(prevX, prevY, newX, newY, durationMs = 40)
+            }
+        }
+    }
+
+    fun onGenericMotionEventExternal(event: MotionEvent): Boolean {
+        val sources = event.source
+        if ((sources and android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK ||
+            (sources and android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+        ) {
+            val device = event.device
+            var lx = event.getAxisValue(MotionEvent.AXIS_X)
+            var ly = event.getAxisValue(MotionEvent.AXIS_Y)
+            if (device != null) {
+                val xRange = device.getMotionRange(MotionEvent.AXIS_X, event.source)
+                if (xRange != null && xRange.flat > 0f && Math.abs(lx) < xRange.flat) lx = 0f
+                val yRange = device.getMotionRange(MotionEvent.AXIS_Y, event.source)
+                if (yRange != null && yRange.flat > 0f && Math.abs(ly) < yRange.flat) ly = 0f
+            }
+            onLeftStickMove(lx, ly)
+
+            var rx = event.getAxisValue(MotionEvent.AXIS_Z)
+            var ry = event.getAxisValue(MotionEvent.AXIS_RZ)
+            if (rx == 0f && ry == 0f) {
+                rx = event.getAxisValue(MotionEvent.AXIS_RX)
+                ry = event.getAxisValue(MotionEvent.AXIS_RY)
+            }
+            if (device != null) {
+                val zRange = device.getMotionRange(MotionEvent.AXIS_Z, event.source)
+                    ?: device.getMotionRange(MotionEvent.AXIS_RX, event.source)
+                if (zRange != null && zRange.flat > 0f && Math.abs(rx) < zRange.flat) rx = 0f
+                val rzRange = device.getMotionRange(MotionEvent.AXIS_RZ, event.source)
+                    ?: device.getMotionRange(MotionEvent.AXIS_RY, event.source)
+                if (rzRange != null && rzRange.flat > 0f && Math.abs(ry) < rzRange.flat) ry = 0f
+            }
+            onRightStickMove(rx, ry)
+            return true
+        }
+        return false
     }
 
     private fun executeRadialDirectionAction(action: String) {
@@ -360,6 +537,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     // ==========================================
     fun onGamepadKeyDown(keyCode: Int): Boolean {
         val keyName = KeyEvent.keyCodeToString(keyCode)
+        val wasAlreadyPressed = _pressedButtons.value.contains(keyName)
         val newPressed = _pressedButtons.value + keyName
         _pressedButtons.value = newPressed
         resetAutoHideTimer()
@@ -367,7 +545,15 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         // Handle recording mode
         val recordingTarget = _recordingShortcutTarget.value
         if (recordingTarget != null) {
-            recordKey(keyName)
+            if (!wasAlreadyPressed) {
+                recordKey(keyName)
+            }
+            return true
+        }
+
+        // If button is already held down, do not spam actions or re-trigger clicks!
+        // This ensures holding face buttons behaves like holding a mouse button (e.g. drag & drop, hold to select)
+        if (wasAlreadyPressed) {
             return true
         }
 
@@ -527,6 +713,11 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
             } else if (action == GamepadAction.MOUSE_RIGHT_CLICK) {
                 _isRightMouseDown.value = false
             }
+            FlickPadOverlayService.updateCursorClickState(
+                isLeftDown = _isLeftMouseDown.value,
+                isRightDown = _isRightMouseDown.value,
+                isDragLocked = _isDragLocked.value
+            )
             return
         }
 
@@ -624,17 +815,52 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
             GamepadAction.NAV_ESCAPE -> showStatus("Escape")
 
             // Cursor & Mouse
-            GamepadAction.MOUSE_LEFT_CLICK -> _isLeftMouseDown.value = true
-            GamepadAction.MOUSE_RIGHT_CLICK -> _isRightMouseDown.value = true
-            GamepadAction.MOUSE_MIDDLE_CLICK -> showStatus("Middle Click")
-            GamepadAction.MOUSE_DOUBLE_CLICK -> showStatus("Double Click")
+            GamepadAction.MOUSE_LEFT_CLICK -> {
+                _isLeftMouseDown.value = true
+                FlickPadOverlayService.updateCursorClickState(
+                    isLeftDown = true,
+                    isRightDown = _isRightMouseDown.value,
+                    isDragLocked = _isDragLocked.value
+                )
+                if (_cursorY.value <= 60f) {
+                    FlickPadAccessibilityService.openNotifications()
+                } else {
+                    FlickPadAccessibilityService.clickAt(_cursorX.value, _cursorY.value)
+                }
+            }
+            GamepadAction.MOUSE_RIGHT_CLICK -> {
+                _isRightMouseDown.value = true
+                FlickPadOverlayService.updateCursorClickState(
+                    isLeftDown = _isLeftMouseDown.value,
+                    isRightDown = true,
+                    isDragLocked = _isDragLocked.value
+                )
+                FlickPadAccessibilityService.performBack()
+            }
+            GamepadAction.MOUSE_MIDDLE_CLICK -> {
+                FlickPadAccessibilityService.openQuickSettings()
+            }
+            GamepadAction.MOUSE_DOUBLE_CLICK -> {
+                FlickPadAccessibilityService.clickAt(_cursorX.value, _cursorY.value)
+                viewModelScope.launch {
+                    delay(80)
+                    FlickPadAccessibilityService.clickAt(_cursorX.value, _cursorY.value)
+                }
+            }
             GamepadAction.MOUSE_DRAG_LOCK -> {
                 _isDragLocked.value = !_isDragLocked.value
                 _isLeftMouseDown.value = _isDragLocked.value
+                FlickPadOverlayService.updateCursorClickState(
+                    isLeftDown = _isLeftMouseDown.value,
+                    isRightDown = _isRightMouseDown.value,
+                    isDragLocked = _isDragLocked.value
+                )
                 showStatus(if (_isDragLocked.value) "Drag Lock: ON" else "Drag Lock: OFF")
             }
             GamepadAction.MOUSE_SCROLL_CLICK -> showStatus("Scroll Click")
-            GamepadAction.BROWSER_BACK -> showStatus("Browser Back")
+            GamepadAction.BROWSER_BACK -> {
+                FlickPadAccessibilityService.performBack()
+            }
             GamepadAction.BROWSER_FORWARD -> showStatus("Browser Forward")
             GamepadAction.SCROLL_UP_ACTION -> _scrollOffset.value = (_scrollOffset.value - 20f).coerceIn(-1000f, 1000f)
             GamepadAction.SCROLL_DOWN_ACTION -> _scrollOffset.value = (_scrollOffset.value + 20f).coerceIn(-1000f, 1000f)
@@ -648,6 +874,8 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     // ==========================================
     fun appendCharacter(char: String) {
         _typedText.value += char
+        val app = getApplication<Application>()
+        FlickPadOverlayService.injectText(app, char)
     }
 
     fun backspace() {
@@ -655,6 +883,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
             _typedText.value = _typedText.value.dropLast(1)
             triggerHaptic(25)
         }
+        FlickPadOverlayService.injectBackspace()
     }
 
     fun clearText() {
@@ -699,12 +928,26 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     // MODE & OVERLAY (AUTOMATIC SPAWN & TIMEOUT)
     // ==========================================
     fun setMode(mode: String) {
+        val previousMode = _activeMode.value
         _activeMode.value = mode
+        if (mode != previousMode) {
+            triggerModeToast(mode)
+        }
         if (mode == "TEXT_INPUT") {
             _overlayVisible.value = true
+            FlickPadOverlayService.setCursorVisible(false)
+            FlickPadOverlayService.setHudVisibility(true)
+            notifyOverlayHudUpdate()
             resetAutoHideTimer()
+        } else if (mode == "CURSOR_CONTROL") {
+            _overlayVisible.value = false
+            FlickPadOverlayService.setOverlayHudVisible(false)
+            FlickPadOverlayService.setCursorVisible(true)
+            FlickPadOverlayService.updateCursorPosition(_cursorX.value, _cursorY.value)
         } else if (mode == "OFF") {
             _overlayVisible.value = false
+            FlickPadOverlayService.setCursorVisible(false)
+            FlickPadOverlayService.setOverlayHudVisible(false)
         }
         val current = _currentProfile.value
         if (current != null && current.mode != mode) {
@@ -728,8 +971,13 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun toggleOverlay() {
-        _overlayVisible.value = !_overlayVisible.value
-        showStatus(if (_overlayVisible.value) "Overlay HUD: Visible" else "Overlay HUD: Hidden")
+        setOverlayVisible(!_overlayVisible.value)
+    }
+
+    fun setOverlayVisible(visible: Boolean) {
+        _overlayVisible.value = visible
+        FlickPadOverlayService.setOverlayHudVisible(visible)
+        showStatus(if (visible) "Overlay HUD: Enabled" else "Overlay HUD: Disabled")
     }
 
     // ==========================================
@@ -743,6 +991,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         val current = _currentProfile.value ?: return
         val updated = current.copy(activeLayoutId = layoutId)
         _currentProfile.value = updated
+        notifyOverlayHudUpdate()
         viewModelScope.launch {
             repository.updateProfile(updated)
             showStatus("Active Layout: ${layout.name} (${layout.id})")
@@ -771,6 +1020,7 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
         if (activeLayout != null) {
             _parsedZones.value = activeLayout.getZonesForModifier(targetMod)
         }
+        notifyOverlayHudUpdate()
         showStatus("Layer: $targetMod")
     }
 
@@ -1126,6 +1376,10 @@ class FlickPadViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteProfile(profile: ProfileEntity) {
+        if (profile.name == "Custom Default" || profile.isDefault) {
+            showStatus("Custom Default profile cannot be deleted")
+            return
+        }
         viewModelScope.launch {
             repository.deleteProfile(profile)
             showStatus("Deleted profile: ${profile.name}")

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -71,215 +73,368 @@ fun PlayTestScreen(
     val scale = currentProfile?.overlayScale ?: 1.0f
     val opacity = currentProfile?.overlayOpacity ?: 0.90f
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left Pane: Mode Pills, Live Output, and HUD Preview
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Mode Selector Pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val isOff = activeMode == "OFF"
+                        FilterChip(
+                            selected = isOff,
+                            onClick = { viewModel.setMode("OFF") },
+                            label = { Text("[OFF]", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = if (isOff) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = { Icon(Icons.Default.PowerSettingsNew, contentDescription = null, Modifier.width(12.dp)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = TerminalGreen,
+                                selectedLeadingIconColor = TerminalGreen,
+                                containerColor = Color.Black,
+                                labelColor = TerminalAmber,
+                                iconColor = TerminalAmber
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isOff,
+                                borderColor = TerminalCardBorder,
+                                selectedBorderColor = TerminalGreen
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        val isTextInput = activeMode == "TEXT_INPUT"
+                        FilterChip(
+                            selected = isTextInput,
+                            onClick = { viewModel.setMode("TEXT_INPUT") },
+                            label = { Text("[TEXT_IN]", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = if (isTextInput) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null, Modifier.width(12.dp)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = TerminalGreen,
+                                selectedLeadingIconColor = TerminalGreen,
+                                containerColor = Color.Black,
+                                labelColor = TerminalAmber,
+                                iconColor = TerminalAmber
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isTextInput,
+                                borderColor = TerminalCardBorder,
+                                selectedBorderColor = TerminalGreen
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        val isCursor = activeMode == "CURSOR_CONTROL"
+                        FilterChip(
+                            selected = isCursor,
+                            onClick = { viewModel.setMode("CURSOR_CONTROL") },
+                            label = { Text("[CURSOR]", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = if (isCursor) FontWeight.Bold else FontWeight.Normal) },
+                            leadingIcon = { Icon(Icons.Default.Mouse, contentDescription = null, Modifier.width(12.dp)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.Black,
+                                selectedLabelColor = TerminalGreen,
+                                selectedLeadingIconColor = TerminalGreen,
+                                containerColor = Color.Black,
+                                labelColor = TerminalAmber,
+                                iconColor = TerminalAmber
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = isCursor,
+                                borderColor = TerminalCardBorder,
+                                selectedBorderColor = TerminalGreen
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    LiveOutputCard(
+                        text = typedText,
+                        onClear = { viewModel.clearText() }
+                    )
+                }
+
+                // HUD Preview in left pane - sized to match height in landscape
+                if (activeMode == "TEXT_INPUT" && overlayVisible) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight(0.95f)
+                                .aspectRatio(1.0f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            RadialOverlayView(
+                                activeZoneIndex = activeZoneIndex,
+                                armedSectorIndex = armedSectorIndex,
+                                lastFlickedChar = lastFlickedChar,
+                                zones = parsedZones,
+                                themeName = theme,
+                                scale = 1.0f,
+                                opacity = opacity,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Right Pane: Virtual Controller Gamepad
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                VirtualStickPad(
+                    onLeftStickMove = { x, y -> viewModel.onLeftStickMove(x, y) },
+                    onRightStickMove = { x, y -> viewModel.onRightStickMove(x, y) },
+                    onActionClick = { action -> viewModel.executeAction(action) }
+                )
+            }
+        }
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Mode Selector Pills (Turns green when enabled/selected)
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val isOff = activeMode == "OFF"
-            FilterChip(
-                selected = isOff,
-                onClick = { viewModel.setMode("OFF") },
-                label = { Text("[OFF]", fontFamily = FontFamily.Monospace, fontWeight = if (isOff) FontWeight.Bold else FontWeight.Normal) },
-                leadingIcon = { Icon(Icons.Default.PowerSettingsNew, contentDescription = null, Modifier.width(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color.Black,
-                    selectedLabelColor = TerminalGreen,
-                    selectedLeadingIconColor = TerminalGreen,
-                    containerColor = Color.Black,
-                    labelColor = TerminalAmber.copy(alpha = 0.6f),
-                    iconColor = TerminalAmber.copy(alpha = 0.6f)
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
+            // Mode Selector Pills (Turns green when enabled/selected)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val isOff = activeMode == "OFF"
+                FilterChip(
                     selected = isOff,
-                    borderColor = TerminalCardBorder,
-                    selectedBorderColor = TerminalGreen
-                )
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            val isTextInput = activeMode == "TEXT_INPUT"
-            FilterChip(
-                selected = isTextInput,
-                onClick = { viewModel.setMode("TEXT_INPUT") },
-                label = { Text("[TEXT_IN]", fontFamily = FontFamily.Monospace, fontWeight = if (isTextInput) FontWeight.Bold else FontWeight.Normal) },
-                leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null, Modifier.width(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color.Black,
-                    selectedLabelColor = TerminalGreen,
-                    selectedLeadingIconColor = TerminalGreen,
-                    containerColor = Color.Black,
-                    labelColor = TerminalAmber.copy(alpha = 0.6f),
-                    iconColor = TerminalAmber.copy(alpha = 0.6f)
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = isTextInput,
-                    borderColor = TerminalCardBorder,
-                    selectedBorderColor = TerminalGreen
-                )
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            val isCursor = activeMode == "CURSOR_CONTROL"
-            FilterChip(
-                selected = isCursor,
-                onClick = { viewModel.setMode("CURSOR_CONTROL") },
-                label = { Text("[CURSOR]", fontFamily = FontFamily.Monospace, fontWeight = if (isCursor) FontWeight.Bold else FontWeight.Normal) },
-                leadingIcon = { Icon(Icons.Default.Mouse, contentDescription = null, Modifier.width(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color.Black,
-                    selectedLabelColor = TerminalGreen,
-                    selectedLeadingIconColor = TerminalGreen,
-                    containerColor = Color.Black,
-                    labelColor = TerminalAmber.copy(alpha = 0.6f),
-                    iconColor = TerminalAmber.copy(alpha = 0.6f)
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = isCursor,
-                    borderColor = TerminalCardBorder,
-                    selectedBorderColor = TerminalGreen
-                )
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Outlined test input field with X button to clear all
-        LiveOutputCard(
-            text = typedText,
-            onClear = { viewModel.clearText() }
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Radial Overlay Keyboard HUD
-        AnimatedVisibility(visible = overlayVisible) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Black)
-                    .border(1.dp, TerminalCardBorder, RoundedCornerShape(12.dp))
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "> RADIAL_KEYBOARD_HUD",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TerminalAmber,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        Text(
-                            text = "ZONE: $activeZoneIndex",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TerminalAmber.copy(alpha = 0.7f),
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    RadialOverlayView(
-                        activeZoneIndex = activeZoneIndex,
-                        armedSectorIndex = armedSectorIndex,
-                        lastFlickedChar = lastFlickedChar,
-                        zones = parsedZones,
-                        themeName = theme,
-                        scale = scale * 0.95f,
-                        opacity = opacity
+                    onClick = { viewModel.setMode("OFF") },
+                    label = { Text("[OFF]", fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = if (isOff) FontWeight.Bold else FontWeight.Normal) },
+                    leadingIcon = { Icon(Icons.Default.PowerSettingsNew, contentDescription = null, Modifier.width(14.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color.Black,
+                        selectedLabelColor = TerminalGreen,
+                        selectedLeadingIconColor = TerminalGreen,
+                        containerColor = Color.Black,
+                        labelColor = TerminalAmber,
+                        iconColor = TerminalAmber
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isOff,
+                        borderColor = TerminalCardBorder,
+                        selectedBorderColor = TerminalGreen
                     )
+                )
 
-                    if (pressedButtons.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "BTN_INPUT: ${pressedButtons.joinToString(", ") { it.replace("KEYCODE_BUTTON_", "") }}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TerminalGreen,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.width(6.dp))
+
+                val isTextInput = activeMode == "TEXT_INPUT"
+                FilterChip(
+                    selected = isTextInput,
+                    onClick = { viewModel.setMode("TEXT_INPUT") },
+                    label = { Text("[TEXT_IN]", fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = if (isTextInput) FontWeight.Bold else FontWeight.Normal) },
+                    leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null, Modifier.width(14.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color.Black,
+                        selectedLabelColor = TerminalGreen,
+                        selectedLeadingIconColor = TerminalGreen,
+                        containerColor = Color.Black,
+                        labelColor = TerminalAmber,
+                        iconColor = TerminalAmber
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isTextInput,
+                        borderColor = TerminalCardBorder,
+                        selectedBorderColor = TerminalGreen
+                    )
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                val isCursor = activeMode == "CURSOR_CONTROL"
+                FilterChip(
+                    selected = isCursor,
+                    onClick = { viewModel.setMode("CURSOR_CONTROL") },
+                    label = { Text("[CURSOR]", fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = if (isCursor) FontWeight.Bold else FontWeight.Normal) },
+                    leadingIcon = { Icon(Icons.Default.Mouse, contentDescription = null, Modifier.width(14.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color.Black,
+                        selectedLabelColor = TerminalGreen,
+                        selectedLeadingIconColor = TerminalGreen,
+                        containerColor = Color.Black,
+                        labelColor = TerminalAmber,
+                        iconColor = TerminalAmber
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isCursor,
+                        borderColor = TerminalCardBorder,
+                        selectedBorderColor = TerminalGreen
+                    )
+                )
             }
-        }
 
-        if (!overlayVisible && activeMode == "TEXT_INPUT") {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp)),
-                color = Color.Black,
-                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Outlined test input field with X button to clear all
+            LiveOutputCard(
+                text = typedText,
+                onClear = { viewModel.clearText() }
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Floating Overlay Keyboard HUD - Sized to nearly screen width
+            AnimatedVisibility(visible = overlayVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black)
+                        .border(1.dp, TerminalCardBorder, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column {
-                        Text(
-                            "STATUS: OVERLAY_SLEEP",
-                            fontWeight = FontWeight.Bold,
-                            color = TerminalAmber,
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "> FLOATING_OVERLAY_HUD",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TerminalAmber,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.5.sp
+                            )
+                            Text(
+                                text = "ZONE: $activeZoneIndex",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TerminalAmber.copy(alpha = 0.8f),
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.5.sp
+                            )
+                        }
+
+                        RadialOverlayView(
+                            activeZoneIndex = activeZoneIndex,
+                            armedSectorIndex = armedSectorIndex,
+                            lastFlickedChar = lastFlickedChar,
+                            zones = parsedZones,
+                            themeName = theme,
+                            scale = 1.0f,
+                            opacity = opacity
                         )
-                        Text(
-                            "Touch stick or tap to revive HUD",
-                            fontSize = 11.sp,
-                            color = TerminalAmber.copy(alpha = 0.6f),
-                            fontFamily = FontFamily.Monospace
-                        )
+
+                        if (pressedButtons.isNotEmpty()) {
+                            Text(
+                                text = "BTN_INPUT: ${pressedButtons.joinToString(", ") { it.replace("KEYCODE_BUTTON_", "") }}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TerminalGreen,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = { viewModel.toggleOverlay() },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
-                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.Black,
-                            contentColor = TerminalGreen
-                        )
+                }
+            }
+
+            if (!overlayVisible && activeMode == "TEXT_INPUT") {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp)),
+                    color = Color.Black,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            "WAKE HUD",
-                            color = TerminalGreen,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
-                        )
+                        Column {
+                            Text(
+                                "STATUS: OVERLAY_SLEEP",
+                                fontWeight = FontWeight.Bold,
+                                color = TerminalAmber,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                "Touch stick or tap to revive HUD",
+                                fontSize = 10.sp,
+                                color = TerminalAmber.copy(alpha = 0.6f),
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { viewModel.toggleOverlay() },
+                            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.Black,
+                                contentColor = TerminalGreen
+                            ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "WAKE HUD",
+                                color = TerminalGreen,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Virtual On-Screen Controller Pad
+        // Virtual On-Screen Controller Pad (always visible on screen)
         VirtualStickPad(
             onLeftStickMove = { x, y -> viewModel.onLeftStickMove(x, y) },
             onRightStickMove = { x, y -> viewModel.onRightStickMove(x, y) },
             onActionClick = { action -> viewModel.executeAction(action) }
         )
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }

@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
@@ -43,6 +46,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
+import com.example.service.FlickPadOverlayService
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +55,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -115,6 +121,7 @@ fun SettingsScreen(
     val leftStickY by viewModel.leftStickY.collectAsState()
     val rightStickX by viewModel.rightStickX.collectAsState()
     val rightStickY by viewModel.rightStickY.collectAsState()
+    val overlayVisible by viewModel.overlayVisible.collectAsState()
 
     var leftDeadzone by remember(currentProfile) { mutableFloatStateOf(currentProfile?.leftDeadzone ?: 0.22f) }
     var leftSens by remember(currentProfile) { mutableFloatStateOf(currentProfile?.leftSensitivity ?: 1.0f) }
@@ -154,12 +161,14 @@ fun SettingsScreen(
             text = "SETTINGS",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = FlickCyan
+            color = TerminalAmber,
+            fontFamily = FontFamily.Monospace
         )
         Text(
             text = "Device connections, shortcut recording, profiles management, and overlay configuration.",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.65f)
+            color = TerminalAmber.copy(alpha = 0.7f),
+            fontFamily = FontFamily.Monospace
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -170,8 +179,8 @@ fun SettingsScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = FlickSurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(1.dp, FlickCardBorder)
+            color = Color.Black,
+            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 val isAnyConnected = connectedControllers.isNotEmpty()
@@ -183,12 +192,12 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Simple colored dot showing whether it is currently connected successfully
+                        // Colored dot: Green if connected, Amber if searching/idle
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
                                 .clip(CircleShape)
-                                .background(if (isAnyConnected) FlickGreen else FlickRed)
+                                .background(if (isAnyConnected) TerminalGreen else TerminalRed)
                                 .testTag("status_dot")
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -196,12 +205,13 @@ fun SettingsScreen(
                             text = "CONNECTED INPUT DEVICE",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = TerminalAmber,
+                            fontFamily = FontFamily.Monospace
                         )
                     }
 
                     IconButton(onClick = { viewModel.gamepadManager.refreshControllers() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Rescan", tint = FlickCyan)
+                        Icon(Icons.Default.Refresh, contentDescription = "Rescan", tint = TerminalAmber)
                     }
                 }
 
@@ -211,7 +221,8 @@ fun SettingsScreen(
                     Text(
                         text = "Select which connected gamepad will control FlickPad:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.65f)
+                        color = TerminalAmber.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -224,10 +235,10 @@ fun SettingsScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable { viewModel.gamepadManager.selectController(controller.id) }
                                     .testTag("device_item_${controller.id}"),
-                                color = if (isSelected) FlickCyan.copy(alpha = 0.15f) else Color(0xFF090D17),
+                                color = Color.Black,
                                 border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (isSelected) FlickCyan else Color.White.copy(alpha = 0.08f)
+                                    if (isSelected) 1.5.dp else 1.dp,
+                                    if (isSelected) TerminalGreen else TerminalCardBorder
                                 )
                             ) {
                                 Row(
@@ -240,20 +251,22 @@ fun SettingsScreen(
                                             modifier = Modifier
                                                 .size(8.dp)
                                                 .clip(CircleShape)
-                                                .background(FlickGreen)
+                                                .background(if (isSelected) TerminalGreen else TerminalAmber)
                                         )
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column {
                                             Text(
                                                 text = controller.name,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) FlickCyan else Color.White,
-                                                fontSize = 13.sp
+                                                color = if (isSelected) TerminalGreen else TerminalAmber,
+                                                fontSize = 13.sp,
+                                                fontFamily = FontFamily.Monospace
                                             )
                                             Text(
                                                 text = "ID: ${controller.id} | Vendor: 0x${Integer.toHexString(controller.vendorId)}",
                                                 fontSize = 10.sp,
-                                                color = Color.White.copy(alpha = 0.5f)
+                                                color = if (isSelected) TerminalGreen.copy(alpha = 0.7f) else TerminalAmber.copy(alpha = 0.6f),
+                                                fontFamily = FontFamily.Monospace
                                             )
                                         }
                                     }
@@ -261,10 +274,11 @@ fun SettingsScreen(
                                     if (isSelected) {
                                         Box(
                                             modifier = Modifier
-                                                .background(FlickCyan.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                                .background(TerminalGreen.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                                .border(1.dp, TerminalGreen, RoundedCornerShape(4.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
-                                            Text("ACTIVE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = FlickCyan)
+                                            Text("ACTIVE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TerminalGreen, fontFamily = FontFamily.Monospace)
                                         }
                                     }
                                 }
@@ -290,7 +304,8 @@ fun SettingsScreen(
                         Text(
                             text = "No hardware gamepad connected. Virtual on-screen touch sticks and pass-through are active.",
                             fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.7f)
+                            color = TerminalAmber.copy(alpha = 0.7f),
+                            fontFamily = FontFamily.Monospace
                         )
                     }
                 }
@@ -305,31 +320,33 @@ fun SettingsScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = FlickSurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(1.dp, FlickCardBorder)
+            color = Color.Black,
+            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Keyboard, contentDescription = null, tint = FlickCyan)
+                    Icon(Icons.Default.Keyboard, contentDescription = null, tint = TerminalAmber)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "MODE TOGGLE SHORTCUTS (KEYBINDS)",
+                        text = "MODE SHORTCUTS",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = TerminalAmber,
+                        fontFamily = FontFamily.Monospace
                     )
                 }
                 Text(
                     text = "Enter recording mode to record 1 to 6 keys on your controller to switch modes or toggle the overlay.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = TerminalAmber.copy(alpha = 0.7f),
+                    fontFamily = FontFamily.Monospace
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
                 val shortcutsList = listOf(
                     Triple("TEXT_INPUT", "Text Input Mode", currentProfile?.shortcutTextInput ?: "L3 + R3"),
-                    Triple("OVERLAY", "On-Screen Overlay HUD", currentProfile?.shortcutOverlay ?: "BACK + START"),
+                    Triple("OVERLAY", "Floating Overlay", currentProfile?.shortcutOverlay ?: "BACK + START"),
                     Triple("CURSOR", "Cursor Control Mode", currentProfile?.shortcutCursor ?: "L1 + R1")
                 )
 
@@ -339,8 +356,8 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp)),
-                            color = Color(0xFF090D17),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+                            color = Color.Black,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
@@ -348,22 +365,24 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(label, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
+                                    Text(label, fontWeight = FontWeight.Bold, color = TerminalAmber, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
                                     Text(
                                         text = "Keys: $currentCombo",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = FlickCyan
+                                        color = TerminalGreen,
+                                        fontFamily = FontFamily.Monospace
                                     )
                                 }
 
                                 Button(
                                     onClick = { viewModel.startRecordingShortcut(targetId) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = FlickViolet.copy(alpha = 0.25f)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, FlickViolet),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
+                                    shape = RoundedCornerShape(4.dp),
                                     modifier = Modifier.testTag("btn_record_$targetId")
                                 ) {
-                                    Text("Record", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("Record", color = TerminalGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                                 }
                             }
                         }
@@ -380,8 +399,8 @@ fun SettingsScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = FlickSurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(1.dp, FlickCardBorder)
+            color = Color.Black,
+            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -393,19 +412,21 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = FlickViolet)
+                        Icon(Icons.Default.Share, contentDescription = null, tint = TerminalAmber)
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
                                 text = "PROFILES MANAGEMENT (${allProfiles.size})",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = TerminalAmber,
+                                fontFamily = FontFamily.Monospace
                             )
                             Text(
                                 text = if (profilesExpanded) "Tap to collapse" else "Tap to expand and manage profiles",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.5f)
+                                color = TerminalAmber.copy(alpha = 0.6f),
+                                fontFamily = FontFamily.Monospace
                             )
                         }
                     }
@@ -413,7 +434,7 @@ fun SettingsScreen(
                     Icon(
                         if (profilesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
-                        tint = FlickViolet
+                        tint = TerminalAmber
                     )
                 }
 
@@ -433,15 +454,17 @@ fun SettingsScreen(
                                     showCreateProfileDialog = true
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorderBright),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
                                 shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(36.dp)
                                     .testTag("button_create_profile")
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = null, Modifier.size(13.dp), tint = TerminalAmber)
+                                Icon(Icons.Default.Add, contentDescription = null, Modifier.size(14.dp), tint = TerminalGreen)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("+ Save New", color = TerminalAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                Text("Save New", color = TerminalGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                             }
 
                             Button(
@@ -452,11 +475,13 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder),
                                 shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(36.dp)
                                     .testTag("button_export_profile")
                             ) {
-                                Icon(Icons.Default.FileUpload, contentDescription = null, Modifier.size(13.dp), tint = TerminalAmber)
+                                Icon(Icons.Default.FileUpload, contentDescription = null, Modifier.size(14.dp), tint = TerminalAmber)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Export", color = TerminalAmber, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                             }
@@ -469,11 +494,13 @@ fun SettingsScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder),
                                 shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                                 modifier = Modifier
                                     .weight(1f)
+                                    .height(36.dp)
                                     .testTag("button_import_profile")
                             ) {
-                                Icon(Icons.Default.FileDownload, contentDescription = null, Modifier.size(13.dp), tint = TerminalAmber)
+                                Icon(Icons.Default.FileDownload, contentDescription = null, Modifier.size(14.dp), tint = TerminalAmber)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Import", color = TerminalAmber, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                             }
@@ -490,10 +517,10 @@ fun SettingsScreen(
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable { viewModel.loadProfile(profile) }
                                         .testTag("profile_item_${profile.id}"),
-                                    color = if (isActive) Color(0xFF0F2238) else Color(0xFF090D17),
+                                    color = Color.Black,
                                     border = androidx.compose.foundation.BorderStroke(
-                                        1.dp,
-                                        if (isActive) FlickCyan else Color.White.copy(alpha = 0.08f)
+                                        if (isActive) 1.5.dp else 1.dp,
+                                        if (isActive) TerminalGreen else TerminalCardBorder
                                     )
                                 ) {
                                     Row(
@@ -506,15 +533,21 @@ fun SettingsScreen(
                                                 Text(
                                                     text = profile.name,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (isActive) FlickCyan else Color.White,
-                                                    fontSize = 13.sp
+                                                    color = if (isActive) TerminalGreen else TerminalAmber,
+                                                    fontSize = 13.sp,
+                                                    fontFamily = FontFamily.Monospace
                                                 )
                                                 if (profile.isDefault) {
                                                     Spacer(modifier = Modifier.width(6.dp))
-                                                    Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
+                                                    Icon(Icons.Default.Star, contentDescription = null, tint = TerminalGreen, modifier = Modifier.size(12.dp))
                                                 }
                                             }
-                                            Text(profile.description, fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                                            Text(
+                                                profile.description,
+                                                fontSize = 11.sp,
+                                                color = if (isActive) TerminalGreen.copy(alpha = 0.7f) else TerminalAmber.copy(alpha = 0.6f),
+                                                fontFamily = FontFamily.Monospace
+                                            )
                                         }
 
                                         Row {
@@ -525,14 +558,24 @@ fun SettingsScreen(
                                                 Icon(
                                                     Icons.Default.Star,
                                                     contentDescription = "Default",
-                                                    tint = if (profile.isDefault) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.3f),
+                                                    tint = if (profile.isDefault) TerminalGreen else TerminalAmber.copy(alpha = 0.4f),
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                             }
 
-                                            if (allProfiles.size > 1) {
+                                            val isProtected = profile.name == "Custom Default" || profile.isDefault
+                                            if (isProtected) {
+                                                Icon(
+                                                    Icons.Default.Lock,
+                                                    contentDescription = "Protected Profile (Cannot be deleted)",
+                                                    tint = TerminalGreen.copy(alpha = 0.5f),
+                                                    modifier = Modifier
+                                                        .padding(10.dp)
+                                                        .size(16.dp)
+                                                )
+                                            } else if (allProfiles.size > 1) {
                                                 IconButton(onClick = { viewModel.deleteProfile(profile) }) {
-                                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = FlickRed.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = TerminalRed, modifier = Modifier.size(16.dp))
                                                 }
                                             }
                                         }
@@ -557,19 +600,160 @@ fun SettingsScreen(
             border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "ON-SCREEN OVERLAY SETTINGS",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TerminalAmber,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = "Configure persistent on-screen HUD size, opacity, and auto-hide timeout.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TerminalAmber.copy(alpha = 0.65f),
-                    fontFamily = FontFamily.Monospace
-                )
+                // Combined Floating Overlay title and toggle switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Floating Overlay",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (overlayVisible) TerminalGreen else TerminalAmber,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Switch(
+                        checked = overlayVisible,
+                        onCheckedChange = { isChecked ->
+                            viewModel.setOverlayVisible(isChecked)
+                            if (isChecked) {
+                                if (Settings.canDrawOverlays(context)) {
+                                    FlickPadOverlayService.start(context)
+                                }
+                            } else {
+                                FlickPadOverlayService.setOverlayHudVisible(false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = TerminalGreen,
+                            checkedTrackColor = Color.Black,
+                            checkedBorderColor = TerminalGreen,
+                            uncheckedThumbColor = TerminalAmber,
+                            uncheckedTrackColor = Color.Black,
+                            uncheckedBorderColor = TerminalCardBorder
+                        ),
+                        modifier = Modifier.testTag("switch_manual_overlay")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Display Over Other Apps Permission helper
+                val hasOverlayPermission = Settings.canDrawOverlays(context)
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = Color.Black,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (hasOverlayPermission) TerminalGreen else TerminalCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Display Over Other Apps", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (hasOverlayPermission) TerminalGreen else TerminalAmber, fontFamily = FontFamily.Monospace)
+                            Text(if (hasOverlayPermission) "Granted: Overlay runs persistently over any game/app" else "Required: Allow overlay to appear over other apps", fontSize = 10.sp, color = TerminalAmber.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+                        }
+                        if (!hasOverlayPermission) {
+                            Button(
+                                onClick = {
+                                    try {
+                                        val intent = android.content.Intent(
+                                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
+                                shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Text("Grant", color = TerminalGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // In-Game IME Settings helper
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = Color.Black,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("In-Game Text Input (IME)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TerminalGreen, fontFamily = FontFamily.Monospace)
+                            Text("Enable FlickPad in Android Input Settings to type in games", fontSize = 10.sp, color = TerminalAmber.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+                        }
+                        Button(
+                            onClick = {
+                                try {
+                                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS))
+                                } catch (_: Exception) {}
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
+                            shape = RoundedCornerShape(4.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Text("Enable IME", color = TerminalGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Accessibility Service Helper (Global Gamepad Capture & Touch Clicks)
+                val isAccessRunning = com.example.service.FlickPadAccessibilityService.isServiceRunning
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = Color.Black,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isAccessRunning) TerminalGreen else TerminalCardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Global Gamepad & System Touch", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isAccessRunning) TerminalGreen else TerminalAmber, fontFamily = FontFamily.Monospace)
+                            Text(if (isAccessRunning) "Active: Gamepad shortcuts & touch clicks working in any app" else "Enables gamepad shortcuts & clicks across all apps", fontSize = 10.sp, color = TerminalAmber.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
+                        }
+                        if (!isAccessRunning) {
+                            Button(
+                                onClick = {
+                                    try {
+                                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                    } catch (_: Exception) {}
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen),
+                                shape = RoundedCornerShape(4.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Text("Enable", color = TerminalGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -659,21 +843,21 @@ fun SettingsScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = TerminalSurfaceElevated,
-            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorderBright)
+            color = Color.Black,
+            border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "STICK DEADZONES & SENSITIVITY",
+                    text = "STICK DEADZONES",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = TerminalOrange,
+                    color = TerminalAmber,
                     fontFamily = FontFamily.Monospace
                 )
                 Text(
-                    text = "Configure left and right analog stick deadzones (5% to 95%) and response multipliers.",
+                    text = "Configure left and right analog stick deadzones (5% to 95%).",
                     fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = TerminalAmber.copy(alpha = 0.7f),
                     fontFamily = FontFamily.Monospace
                 )
 
@@ -689,7 +873,7 @@ fun SettingsScreen(
                         deadzone = leftDeadzone,
                         stickX = leftStickX,
                         stickY = leftStickY,
-                        accentColor = TerminalOrange,
+                        accentColor = TerminalAmber,
                         onTestDrag = { x, y -> viewModel.onLeftStickMove(x, y) },
                         modifier = Modifier
                             .weight(1f)
@@ -701,7 +885,7 @@ fun SettingsScreen(
                         deadzone = rightDeadzone,
                         stickX = rightStickX,
                         stickY = rightStickY,
-                        accentColor = TerminalGreen,
+                        accentColor = TerminalAmber,
                         onTestDrag = { x, y -> viewModel.onRightStickMove(x, y) },
                         modifier = Modifier
                             .weight(1f)
@@ -716,7 +900,7 @@ fun SettingsScreen(
                     text = "DEADZONE (5% – 95%)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TerminalOrange,
+                    color = TerminalAmber,
                     fontFamily = FontFamily.Monospace
                 )
 
@@ -728,8 +912,8 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Left Stick Deadzone", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace)
-                    Text("${(leftDeadzone * 100).toInt()}%", fontSize = 13.sp, color = TerminalOrange, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                    Text("Left Stick Deadzone", fontSize = 13.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
+                    Text("${(leftDeadzone * 100).toInt()}%", fontSize = 13.sp, color = TerminalGreen, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                 }
                 Slider(
                     value = leftDeadzone,
@@ -738,7 +922,7 @@ fun SettingsScreen(
                         viewModel.updateDeadzoneAndSens(leftDeadzone, leftSens, rightDeadzone, rightSens)
                     },
                     valueRange = 0.05f..0.95f,
-                    colors = SliderDefaults.colors(thumbColor = TerminalOrange, activeTrackColor = TerminalOrange),
+                    colors = SliderDefaults.colors(thumbColor = TerminalGreen, activeTrackColor = TerminalGreen, inactiveTrackColor = TerminalCardBorder),
                     modifier = Modifier.testTag("slider_left_deadzone")
                 )
 
@@ -750,7 +934,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Right Stick Deadzone", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace)
+                    Text("Right Stick Deadzone", fontSize = 13.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                     Text("${(rightDeadzone * 100).toInt()}%", fontSize = 13.sp, color = TerminalGreen, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                 }
                 Slider(
@@ -760,63 +944,8 @@ fun SettingsScreen(
                         viewModel.updateDeadzoneAndSens(leftDeadzone, leftSens, rightDeadzone, rightSens)
                     },
                     valueRange = 0.05f..0.95f,
-                    colors = SliderDefaults.colors(thumbColor = TerminalGreen, activeTrackColor = TerminalGreen),
+                    colors = SliderDefaults.colors(thumbColor = TerminalGreen, activeTrackColor = TerminalGreen, inactiveTrackColor = TerminalCardBorder),
                     modifier = Modifier.testTag("slider_right_deadzone")
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Stick Sensitivity Multipliers
-                Text(
-                    text = "STICK SENSITIVITY",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TerminalOrange,
-                    fontFamily = FontFamily.Monospace
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Left Stick Sensitivity
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Left Stick Sensitivity", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace)
-                    Text(String.format("%.2fx", leftSens), fontSize = 13.sp, color = TerminalOrange, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-                }
-                Slider(
-                    value = leftSens,
-                    onValueChange = {
-                        leftSens = it
-                        viewModel.updateDeadzoneAndSens(leftDeadzone, leftSens, rightDeadzone, rightSens)
-                    },
-                    valueRange = 0.5f..2.5f,
-                    colors = SliderDefaults.colors(thumbColor = TerminalOrange, activeTrackColor = TerminalOrange),
-                    modifier = Modifier.testTag("slider_left_sensitivity")
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Right Stick Sensitivity
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Right Stick Sensitivity", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace)
-                    Text(String.format("%.2fx", rightSens), fontSize = 13.sp, color = TerminalGreen, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-                }
-                Slider(
-                    value = rightSens,
-                    onValueChange = {
-                        rightSens = it
-                        viewModel.updateDeadzoneAndSens(leftDeadzone, leftSens, rightDeadzone, rightSens)
-                    },
-                    valueRange = 0.5f..2.5f,
-                    colors = SliderDefaults.colors(thumbColor = TerminalGreen, activeTrackColor = TerminalGreen),
-                    modifier = Modifier.testTag("slider_right_sensitivity")
                 )
             }
         }
@@ -828,22 +957,29 @@ fun SettingsScreen(
     if (recordingTarget != null) {
         val targetName = when (recordingTarget) {
             "TEXT_INPUT" -> "Text Input Mode"
-            "OVERLAY" -> "On-Screen Overlay HUD"
+            "OVERLAY" -> "Floating Overlay"
             "CURSOR" -> "Cursor Control Mode"
             else -> "Shortcut"
         }
 
         AlertDialog(
             onDismissRequest = { viewModel.cancelRecordingShortcut() },
+            containerColor = Color.Black,
             title = {
-                Text("Recording Shortcut: $targetName")
+                Text(
+                    "RECORD SHORTCUT: ${targetName.uppercase()}",
+                    color = TerminalAmber,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
             },
             text = {
                 Column {
                     Text(
                         "Press 1 to 6 keys/buttons on your controller (or tap below).",
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = TerminalAmber.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -851,29 +987,31 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF090D17))
-                            .border(1.dp, FlickCyan, RoundedCornerShape(8.dp))
+                            .background(Color.Black)
+                            .border(1.dp, if (recordedKeys.isNotEmpty()) TerminalGreen else TerminalCardBorder, RoundedCornerShape(8.dp))
                             .padding(14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (recordedKeys.isEmpty()) {
                             Text(
                                 "Waiting for buttons...",
-                                color = Color.White.copy(alpha = 0.4f),
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                color = TerminalAmber.copy(alpha = 0.4f),
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                fontFamily = FontFamily.Monospace
                             )
                         } else {
                             Text(
                                 text = recordedKeys.joinToString(" + "),
-                                color = FlickCyan,
+                                color = TerminalGreen,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                fontSize = 16.sp,
+                                fontFamily = FontFamily.Monospace
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("Quick Test Buttons:", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                    Text("Quick Test Buttons:", fontSize = 11.sp, color = TerminalAmber.copy(alpha = 0.7f), fontFamily = FontFamily.Monospace)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -882,11 +1020,12 @@ fun SettingsScreen(
                         listOf("L3", "R3", "L1", "R1", "START", "SELECT").forEach { sampleKey ->
                             Button(
                                 onClick = { viewModel.recordKey(sampleKey) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF131D2E)),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder),
                                 modifier = Modifier.weight(1f),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)
                             ) {
-                                Text(sampleKey, fontSize = 9.sp, color = Color.White)
+                                Text(sampleKey, fontSize = 9.sp, color = TerminalAmber, fontFamily = FontFamily.Monospace)
                             }
                         }
                     }
@@ -896,14 +1035,16 @@ fun SettingsScreen(
                 Button(
                     onClick = { viewModel.saveRecordedShortcut() },
                     enabled = recordedKeys.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (recordedKeys.isNotEmpty()) TerminalGreen else TerminalCardBorder),
                     modifier = Modifier.testTag("btn_save_recorded_shortcut")
                 ) {
-                    Text("Save Shortcut")
+                    Text("Save Shortcut", color = if (recordedKeys.isNotEmpty()) TerminalGreen else TerminalAmber.copy(alpha = 0.4f), fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.cancelRecordingShortcut() }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -913,14 +1054,15 @@ fun SettingsScreen(
     if (showCreateProfileDialog) {
         AlertDialog(
             onDismissRequest = { showCreateProfileDialog = false },
-            title = { Text("Create New Profile") },
+            containerColor = Color.Black,
+            title = { Text("CREATE NEW PROFILE", color = TerminalAmber, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = newProfileName,
                         onValueChange = { newProfileName = it },
-                        label = { Text("Profile Name") },
-                        placeholder = { Text("e.g. Apex Legends Chat") },
+                        label = { Text("Profile Name", color = TerminalAmber, fontFamily = FontFamily.Monospace) },
+                        placeholder = { Text("e.g. Tactical Callouts", color = TerminalAmber.copy(alpha = 0.5f), fontFamily = FontFamily.Monospace) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -928,8 +1070,8 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = newProfileDesc,
                         onValueChange = { newProfileDesc = it },
-                        label = { Text("Description") },
-                        placeholder = { Text("e.g. Squad tactical callouts") },
+                        label = { Text("Description", color = TerminalAmber, fontFamily = FontFamily.Monospace) },
+                        placeholder = { Text("e.g. Squad quick chat", color = TerminalAmber.copy(alpha = 0.5f), fontFamily = FontFamily.Monospace) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -942,14 +1084,16 @@ fun SettingsScreen(
                             viewModel.createProfile(newProfileName.trim(), newProfileDesc.trim())
                             showCreateProfileDialog = false
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen)
                 ) {
-                    Text("Create")
+                    Text("Create", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateProfileDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -959,13 +1103,15 @@ fun SettingsScreen(
     if (showExportDialog) {
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Export Profile JSON") },
+            containerColor = Color.Black,
+            title = { Text("EXPORT PROFILE JSON", color = TerminalAmber, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) },
             text = {
                 Column {
                     Text(
                         "Shareable JSON format for Android, Windows and Linux:",
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = TerminalAmber.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(
@@ -973,7 +1119,8 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF090D14))
+                            .background(Color.Black)
+                            .border(1.dp, TerminalCardBorder, RoundedCornerShape(8.dp))
                             .padding(8.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
@@ -981,7 +1128,7 @@ fun SettingsScreen(
                             text = exportedJsonText,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
-                            color = FlickCyan
+                            color = TerminalAmber
                         )
                     }
                 }
@@ -993,16 +1140,18 @@ fun SettingsScreen(
                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         cm.setPrimaryClip(clip)
                         showExportDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen)
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(16.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, Modifier.size(16.dp), tint = TerminalGreen)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Copy to Clipboard")
+                    Text("Copy to Clipboard", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExportDialog = false }) {
-                    Text("Close")
+                    Text("Close", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )
@@ -1012,13 +1161,15 @@ fun SettingsScreen(
     if (showImportDialog) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            title = { Text("Import Profile JSON") },
+            containerColor = Color.Black,
+            title = { Text("IMPORT PROFILE JSON", color = TerminalAmber, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) },
             text = {
                 Column {
                     Text(
                         "Paste a valid FlickPad configuration JSON below:",
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = TerminalAmber.copy(alpha = 0.7f),
+                        fontFamily = FontFamily.Monospace
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -1027,7 +1178,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp),
-                        placeholder = { Text("{\n  \"format\": \"flickpad_profile\",\n  ...\n}") }
+                        placeholder = { Text("{\n  \"format\": \"flickpad_profile\",\n  ...\n}", color = TerminalAmber.copy(alpha = 0.5f), fontFamily = FontFamily.Monospace) }
                     )
                 }
             },
@@ -1040,14 +1191,16 @@ fun SettingsScreen(
                                 showImportDialog = false
                             }
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen)
                 ) {
-                    Text("Import")
+                    Text("Import", color = TerminalGreen, fontFamily = FontFamily.Monospace)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showImportDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TerminalAmber, fontFamily = FontFamily.Monospace)
                 }
             }
         )

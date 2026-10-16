@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">FlickPad</string>
+    <string name="accessibility_service_description">FlickPad system cursor touch dispatcher and status bar interaction.</string>
 </resources>
+

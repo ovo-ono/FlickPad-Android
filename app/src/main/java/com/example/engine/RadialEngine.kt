@@ -55,16 +55,19 @@ object RadialEngine {
     }
 
     /**
-     * Radial sector calculation for Right Analog Stick (0..7 matching 3x3 layout perimeter).
-     * Inside each zone's 3x3 grid:
-     * 0 = Up (North, around 270 deg)
-     * 1 = Up-Right (NE, around 315 deg)
-     * 2 = Right (East, around 0 deg)
-     * 3 = Down-Right (SE, around 45 deg)
-     * 4 = Down (South, around 90 deg)
-     * 5 = Down-Left (SW, around 135 deg)
-     * 6 = Left (West, around 180 deg)
-     * 7 = Up-Left (NW, around 225 deg)
+     * Radial sector calculation for Right Analog Stick matching the 3x3 symbol grid perimeter:
+     * 0 = Up-Left (NW, around 225 deg) -> Row 0, Col 0
+     * 1 = Up (N, around 270 deg) -> Row 0, Col 1
+     * 2 = Up-Right (NE, around 315 deg) -> Row 0, Col 2
+     * 3 = Left (W, around 180 deg) -> Row 1, Col 0
+     * 4 = Right (E, around 0 deg) -> Row 1, Col 2
+     * 5 = Down-Left (SW, around 135 deg) -> Row 2, Col 0
+     * 6 = Down (S, around 90 deg) -> Row 2, Col 1
+     * 7 = Down-Right (SE, around 45 deg) -> Row 2, Col 2
+     *
+     * In Android MotionEvent:
+     * Up is negative Y (-1.0), Down is positive Y (+1.0)
+     * Right is positive X (+1.0), Left is negative X (-1.0)
      *
      * Returns null if inside deadzone.
      */
@@ -81,15 +84,15 @@ object RadialEngine {
         }
 
         return when {
-            degrees in 247.5f..292.5f -> 0 // UP (North)
-            degrees in 292.5f..337.5f -> 1 // UP-RIGHT (NE)
-            degrees >= 337.5f || degrees < 22.5f -> 2 // RIGHT (East)
-            degrees in 22.5f..67.5f -> 3 // DOWN-RIGHT (SE)
-            degrees in 67.5f..112.5f -> 4 // DOWN (South)
+            degrees in 202.5f..247.5f -> 0 // UP-LEFT (NW)
+            degrees in 247.5f..292.5f -> 1 // UP (North)
+            degrees in 292.5f..337.5f -> 2 // UP-RIGHT (NE)
+            degrees in 157.5f..202.5f -> 3 // LEFT (West)
+            degrees >= 337.5f || degrees < 22.5f -> 4 // RIGHT (East)
             degrees in 112.5f..157.5f -> 5 // DOWN-LEFT (SW)
-            degrees in 157.5f..202.5f -> 6 // LEFT (West)
-            degrees in 202.5f..247.5f -> 7 // UP-LEFT (NW)
-            else -> 0
+            degrees in 67.5f..112.5f -> 6 // DOWN (South)
+            degrees in 22.5f..67.5f -> 7 // DOWN-RIGHT (SE)
+            else -> null
         }
     }
 
@@ -110,14 +113,14 @@ object RadialEngine {
 
     fun getSectorDirectionLabel(sector: Int): String {
         return when (sector) {
-            0 -> "N"
-            1 -> "NE"
-            2 -> "E"
-            3 -> "SE"
-            4 -> "S"
+            0 -> "NW"
+            1 -> "N"
+            2 -> "NE"
+            3 -> "W"
+            4 -> "E"
             5 -> "SW"
-            6 -> "W"
-            7 -> "NW"
+            6 -> "S"
+            7 -> "SE"
             else -> "$sector"
         }
     }

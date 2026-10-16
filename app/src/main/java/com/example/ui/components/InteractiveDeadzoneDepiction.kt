@@ -124,46 +124,53 @@ fun InteractiveDeadzoneDepiction(
                 val outerRadius = (size.minDimension / 2f) * 0.88f
                 val deadzoneRadius = outerRadius * deadzone.coerceIn(0.05f, 0.95f)
 
-                // High-clarity crosshair grid (phosphor style)
-                drawLine(
-                    color = TerminalAmber.copy(alpha = 0.25f),
-                    start = Offset(center.x - outerRadius, center.y),
-                    end = Offset(center.x + outerRadius, center.y),
-                    strokeWidth = 1f
+                // 1. ACTIVE zone (outer circle filled with phosphor amber/green)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            if (isEngaged) TerminalGreen.copy(alpha = 0.35f) else TerminalAmber.copy(alpha = 0.30f),
+                            if (isEngaged) TerminalGreen.copy(alpha = 0.15f) else TerminalAmber.copy(alpha = 0.12f)
+                        ),
+                        center = center,
+                        radius = outerRadius
+                    ),
+                    radius = outerRadius,
+                    center = center
                 )
-                drawLine(
-                    color = TerminalAmber.copy(alpha = 0.25f),
-                    start = Offset(center.x, center.y - outerRadius),
-                    end = Offset(center.x, center.y + outerRadius),
-                    strokeWidth = 1f
-                )
-
                 // Outer boundary ring (full 100% range)
                 drawCircle(
-                    color = TerminalAmber.copy(alpha = 0.4f),
+                    color = if (isEngaged) TerminalGreen else TerminalAmber.copy(alpha = 0.6f),
                     radius = outerRadius,
                     center = center,
                     style = Stroke(width = 1.5f)
                 )
 
-                // Shaded Deadzone Disc
+                // High-clarity crosshair grid (phosphor style)
+                drawLine(
+                    color = (if (isEngaged) TerminalGreen else TerminalAmber).copy(alpha = 0.25f),
+                    start = Offset(center.x - outerRadius, center.y),
+                    end = Offset(center.x + outerRadius, center.y),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    color = (if (isEngaged) TerminalGreen else TerminalAmber).copy(alpha = 0.25f),
+                    start = Offset(center.x, center.y - outerRadius),
+                    end = Offset(center.x, center.y + outerRadius),
+                    strokeWidth = 1f
+                )
+
+                // 2. DEADZONE (inner circle is solid black)
                 drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            TerminalAmber.copy(alpha = 0.25f),
-                            TerminalAmber.copy(alpha = 0.05f)
-                        ),
-                        center = center,
-                        radius = deadzoneRadius
-                    ),
+                    color = Color.Black,
                     radius = deadzoneRadius,
                     center = center
                 )
+                // Inner deadzone boundary ring
                 drawCircle(
-                    color = if (isEngaged) TerminalGreen else TerminalAmber,
+                    color = if (isEngaged) TerminalGreen.copy(alpha = 0.8f) else TerminalAmber.copy(alpha = 0.6f),
                     radius = deadzoneRadius,
                     center = center,
-                    style = Stroke(width = 2f)
+                    style = Stroke(width = 1.5f)
                 )
 
                 // Live stick position dot

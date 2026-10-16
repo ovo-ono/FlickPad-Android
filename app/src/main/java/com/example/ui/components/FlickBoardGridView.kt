@@ -95,18 +95,18 @@ fun FlickBoardGridView(
         label = "zone_zoom_transition"
     ) { targetEnlarged ->
         if (targetEnlarged == null) {
-            // Standard 3x3 Grid of 9 Zones
+            // Standard 3x3 Grid of 9 Zones - Compact with minimal gaps like ThumbKey
             Column(
                 modifier = modifier
                     .fillMaxWidth()
                     .background(Color.Black)
-                    .padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 for (row in 0..2) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         for (col in 0..2) {
                             val cell = NINE_ZONE_GRID.first { it.row == row && it.col == col }
@@ -136,6 +136,7 @@ fun FlickBoardGridView(
                 zone = zone,
                 zoneIndex = targetEnlarged,
                 selectedKeyIndex = selectedKeyIndex,
+                armedSectorIndex = armedSectorIndex,
                 onKeyClick = { kIdx -> onKeyClick?.invoke(targetEnlarged, kIdx) },
                 onBack = { onBackFromEnlarged?.invoke() },
                 modifier = modifier
@@ -167,55 +168,73 @@ fun MiniZoneCard(
 
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(4.dp))
             .clickable(onClick = onClick),
         color = Color.Black,
-        shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(if (isArmed) 1.5.dp else 1.dp, borderColor)
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(if (isArmed) 1.5.dp else 0.8.dp, borderColor)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp),
+                .padding(1.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 3x3 layout of 8 keys inside the zone
+            // Compact 3x3 layout of 8 keys inside the zone with the center cell empty
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Top row (Up-Left=7, Up=0, Up-Right=1)
+                // Top row (Up-Left=0, Up=1, Up-Right=2)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(7) ?: "", isArmed = armedSectorIndex == 7)
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(0) ?: "", isArmed = armedSectorIndex == 0)
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(1) ?: "", isArmed = armedSectorIndex == 1)
-                }
-                // Middle row (Left=6, Center Dot, Right=2)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(6) ?: "", isArmed = armedSectorIndex == 6)
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(if (isArmed) TerminalGreen else TerminalAmber.copy(alpha = 0.4f))
-                    )
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(2) ?: "", isArmed = armedSectorIndex == 2)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(0) ?: "", isArmed = armedSectorIndex == 0)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(1) ?: "", isArmed = armedSectorIndex == 1)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(2) ?: "", isArmed = armedSectorIndex == 2)
+                    }
                 }
-                // Bottom row (Down-Left=5, Down=4, Down-Right=3)
+                // Middle row (Left=3, Middle empty, Right=4)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(5) ?: "", isArmed = armedSectorIndex == 5)
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(4) ?: "", isArmed = armedSectorIndex == 4)
-                    MiniKeySquare(symbol = zone?.symbols?.getOrNull(3) ?: "", isArmed = armedSectorIndex == 3)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(3) ?: "", isArmed = armedSectorIndex == 3)
+                    }
+                    // Middle empty cell
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(24.dp))
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(4) ?: "", isArmed = armedSectorIndex == 4)
+                    }
+                }
+                // Bottom row (Down-Left=5, Down=6, Down-Right=7)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(5) ?: "", isArmed = armedSectorIndex == 5)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(6) ?: "", isArmed = armedSectorIndex == 6)
+                    }
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        MiniKeySquare(symbol = zone?.symbols?.getOrNull(7) ?: "", isArmed = armedSectorIndex == 7)
+                    }
                 }
             }
         }
@@ -229,16 +248,21 @@ fun MiniKeySquare(
 ) {
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .fillMaxSize(0.92f)
+            .aspectRatio(1.0f)
             .clip(RoundedCornerShape(3.dp))
-            .background(if (isArmed) TerminalGreen.copy(alpha = 0.25f) else Color.Transparent)
-            .border(0.5.dp, if (isArmed) TerminalGreen else TerminalCardBorder.copy(alpha = 0.35f), RoundedCornerShape(3.dp)),
+            .background(if (isArmed) TerminalGreen.copy(alpha = 0.35f) else Color.Transparent)
+            .border(
+                if (isArmed) 1.5.dp else 0.5.dp,
+                if (isArmed) TerminalGreen else TerminalCardBorder,
+                RoundedCornerShape(3.dp)
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = symbol,
             color = if (isArmed) TerminalGreen else TerminalAmber,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
             maxLines = 1
@@ -251,6 +275,7 @@ fun EnlargedZoneView(
     zone: ZoneData?,
     zoneIndex: Int,
     selectedKeyIndex: Int?,
+    armedSectorIndex: Int? = null,
     onKeyClick: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -298,48 +323,42 @@ fun EnlargedZoneView(
                     .padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Row 1: Up-Left (7), Up (0), Up-Right (1)
+                // Row 1: Up-Left (0), Up (1), Up-Right (2)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    EnlargedKeyButton(keyIndex = 7, symbol = zone?.symbols?.getOrNull(7) ?: "", isSelected = selectedKeyIndex == 7, onClick = { onKeyClick(7) }, modifier = Modifier.weight(1f))
-                    EnlargedKeyButton(keyIndex = 0, symbol = zone?.symbols?.getOrNull(0) ?: "", isSelected = selectedKeyIndex == 0, onClick = { onKeyClick(0) }, modifier = Modifier.weight(1f))
-                    EnlargedKeyButton(keyIndex = 1, symbol = zone?.symbols?.getOrNull(1) ?: "", isSelected = selectedKeyIndex == 1, onClick = { onKeyClick(1) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 0, symbol = zone?.symbols?.getOrNull(0) ?: "", isSelected = selectedKeyIndex == 0 || armedSectorIndex == 0, onClick = { onKeyClick(0) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 1, symbol = zone?.symbols?.getOrNull(1) ?: "", isSelected = selectedKeyIndex == 1 || armedSectorIndex == 1, onClick = { onKeyClick(1) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 2, symbol = zone?.symbols?.getOrNull(2) ?: "", isSelected = selectedKeyIndex == 2 || armedSectorIndex == 2, onClick = { onKeyClick(2) }, modifier = Modifier.weight(1f))
                 }
 
-                // Row 2: Left (6), Center Guide, Right (2)
+                // Row 2: Left (3), Middle Empty, Right (4)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    EnlargedKeyButton(keyIndex = 6, symbol = zone?.symbols?.getOrNull(6) ?: "", isSelected = selectedKeyIndex == 6, onClick = { onKeyClick(6) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 3, symbol = zone?.symbols?.getOrNull(3) ?: "", isSelected = selectedKeyIndex == 3 || armedSectorIndex == 3, onClick = { onKeyClick(3) }, modifier = Modifier.weight(1f))
 
-                    // Center Neutral Indicator
+                    // Middle empty cell with identical weight and aspect ratio for perfect 3x3 alignment
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1.2f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black)
-                            .border(1.dp, TerminalCardBorder.copy(alpha = 0.5f), RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("•", color = TerminalAmber, fontSize = 24.sp, fontFamily = FontFamily.Monospace)
-                    }
+                    )
 
-                    EnlargedKeyButton(keyIndex = 2, symbol = zone?.symbols?.getOrNull(2) ?: "", isSelected = selectedKeyIndex == 2, onClick = { onKeyClick(2) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 4, symbol = zone?.symbols?.getOrNull(4) ?: "", isSelected = selectedKeyIndex == 4 || armedSectorIndex == 4, onClick = { onKeyClick(4) }, modifier = Modifier.weight(1f))
                 }
 
-                // Row 3: Down-Left (5), Down (4), Down-Right (3)
+                // Row 3: Down-Left (5), Down (6), Down-Right (7)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    EnlargedKeyButton(keyIndex = 5, symbol = zone?.symbols?.getOrNull(5) ?: "", isSelected = selectedKeyIndex == 5, onClick = { onKeyClick(5) }, modifier = Modifier.weight(1f))
-                    EnlargedKeyButton(keyIndex = 4, symbol = zone?.symbols?.getOrNull(4) ?: "", isSelected = selectedKeyIndex == 4, onClick = { onKeyClick(4) }, modifier = Modifier.weight(1f))
-                    EnlargedKeyButton(keyIndex = 3, symbol = zone?.symbols?.getOrNull(3) ?: "", isSelected = selectedKeyIndex == 3, onClick = { onKeyClick(3) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 5, symbol = zone?.symbols?.getOrNull(5) ?: "", isSelected = selectedKeyIndex == 5 || armedSectorIndex == 5, onClick = { onKeyClick(5) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 6, symbol = zone?.symbols?.getOrNull(6) ?: "", isSelected = selectedKeyIndex == 6 || armedSectorIndex == 6, onClick = { onKeyClick(6) }, modifier = Modifier.weight(1f))
+                    EnlargedKeyButton(keyIndex = 7, symbol = zone?.symbols?.getOrNull(7) ?: "", isSelected = selectedKeyIndex == 7 || armedSectorIndex == 7, onClick = { onKeyClick(7) }, modifier = Modifier.weight(1f))
                 }
             }
         }

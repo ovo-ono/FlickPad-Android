@@ -19,8 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -187,7 +189,7 @@ fun CursorScreen(
                                 selectedContainerColor = Color.Black,
                                 selectedLabelColor = TerminalGreen,
                                 containerColor = Color.Black,
-                                labelColor = TerminalAmber.copy(alpha = 0.6f)
+                                labelColor = TerminalAmber
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
@@ -255,6 +257,41 @@ fun CursorScreen(
                         viewModel.updateStickRadialAction(isLeft = false, directionIndex = dirIdx, action = act)
                     }
                 )
+
+                // Trackpad Pinch Zoom indicator when both sticks are set to Move Cursor
+                if (leftMoveCursor && rightMoveCursor) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp)),
+                        color = Color.Black,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TerminalGreen)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.ZoomIn, contentDescription = null, tint = TerminalGreen, modifier = Modifier.size(22.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "DUAL-STICK TRACKPAD PINCH ZOOM ACTIVE",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TerminalGreen,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Text(
+                                    text = "• Left Stick Left + Right Stick Right = Zoom In\n• Left Stick Right + Right Stick Left = Zoom Out",
+                                    fontSize = 10.5.sp,
+                                    color = TerminalAmber,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -385,11 +422,12 @@ fun CursorScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     cursorActions.forEach { act ->
+                        val isCurrent = parsedCursorMappings[btnCode] == act.code
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(6.dp))
-                                .border(1.dp, TerminalCardBorder, RoundedCornerShape(6.dp))
+                                .border(1.dp, if (isCurrent) TerminalGreen else TerminalCardBorder, RoundedCornerShape(6.dp))
                                 .clickable {
                                     viewModel.updateCursorButtonMapping(btnCode, act.code)
                                     buttonToRemapInCursorMode = null
@@ -402,8 +440,27 @@ fun CursorScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(act.title, fontWeight = FontWeight.Bold, color = TerminalAmber, fontFamily = FontFamily.Monospace)
-                                Text(act.category, fontSize = 11.sp, color = TerminalGreen, fontFamily = FontFamily.Monospace)
+                                Text(
+                                    act.title,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isCurrent) TerminalGreen else TerminalAmber,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                if (isCurrent) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = TerminalGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        act.category,
+                                        fontSize = 11.sp,
+                                        color = TerminalAmber.copy(alpha = 0.5f),
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
                             }
                         }
                     }

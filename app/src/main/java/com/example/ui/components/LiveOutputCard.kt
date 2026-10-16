@@ -23,7 +23,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.TerminalAmber
+import com.example.ui.theme.TerminalCardBorder
 import com.example.ui.theme.TerminalCardBorderBright
+import com.example.ui.theme.TerminalGreen
 import com.example.ui.theme.TerminalOrange
 import com.example.ui.theme.TerminalRed
 import com.example.ui.theme.TerminalSurfaceElevated
@@ -43,14 +46,14 @@ fun LiveOutputCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(TerminalSurfaceElevated)
-            .border(1.5.dp, TerminalCardBorderBright, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .background(Color.Black)
+            .border(1.dp, TerminalCardBorder, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(42.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -62,17 +65,17 @@ fun LiveOutputCard(
                 if (text.isEmpty()) {
                     Text(
                         text = "terminal@flickpad:~$ _",
-                        color = TerminalOrange.copy(alpha = 0.4f),
+                        color = TerminalAmber.copy(alpha = 0.5f),
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
                 } else {
                     Text(
                         text = text,
-                        color = TerminalTextPrimary,
+                        color = TerminalGreen,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

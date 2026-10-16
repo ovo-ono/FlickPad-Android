@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +45,9 @@ import com.example.model.GamepadAction
 import com.example.ui.theme.TerminalAmber
 import com.example.ui.theme.TerminalCardBorder
 import com.example.ui.theme.TerminalGreen
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
@@ -63,12 +69,12 @@ fun VirtualStickPad(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(10.dp)),
         color = Color.Black,
         border = androidx.compose.foundation.BorderStroke(1.dp, TerminalCardBorder)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Row: Shoulder Buttons (L2, L1 | Select, Start | R1, R2)
@@ -78,25 +84,25 @@ fun VirtualStickPad(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Left Shoulders
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     ShoulderButton(label = "L2", onClick = { onActionClick(GamepadAction.TAB) }, tag = "button_l2")
                     ShoulderButton(label = "L1", onClick = { onActionClick(GamepadAction.KEY_ESC) }, tag = "button_l1")
                 }
 
                 // Center System Buttons
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     SystemButton(label = "SELECT", onClick = { onActionClick(GamepadAction.CYCLE_MODE) }, tag = "button_select")
                     SystemButton(label = "START", onClick = { onActionClick(GamepadAction.TOGGLE_OVERLAY) }, tag = "button_start")
                 }
 
                 // Right Shoulders
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     ShoulderButton(label = "R1", onClick = { onActionClick(GamepadAction.CYCLE_LAYOUTS) }, tag = "button_r1")
                     ShoulderButton(label = "R2", onClick = { onActionClick(GamepadAction.ENTER) }, tag = "button_r2")
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Main Row: Left Stick | Face Buttons | Right Stick
             Row(
@@ -109,11 +115,11 @@ fun VirtualStickPad(
                     Text(
                         text = "L-STICK",
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = TerminalAmber
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     AnalogThumbstick(
                         label = "L",
                         accentColor = TerminalAmber,
@@ -125,7 +131,7 @@ fun VirtualStickPad(
                 // Center Action Buttons (Y top, X left, B right, A bottom)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Top: Y (Enter)
                     ActionButton(
@@ -136,7 +142,7 @@ fun VirtualStickPad(
                     )
 
                     // Middle Row: X (Shift) and B (Back)
-                    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         ActionButton(
                             label = "■ X",
                             subLabel = "Shift",
@@ -165,11 +171,11 @@ fun VirtualStickPad(
                     Text(
                         text = "R-STICK",
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = TerminalAmber
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     AnalogThumbstick(
                         label = "R",
                         accentColor = TerminalAmber,
@@ -191,7 +197,7 @@ fun ShoulderButton(
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier
-            .size(width = 44.dp, height = 30.dp)
+            .size(width = 44.dp, height = 28.dp)
             .testTag(tag),
         shape = RoundedCornerShape(4.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
@@ -203,7 +209,7 @@ fun ShoulderButton(
     ) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 11.5.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
             color = TerminalAmber
@@ -220,7 +226,7 @@ fun SystemButton(
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier
-            .size(width = 56.dp, height = 28.dp)
+            .size(width = 54.dp, height = 26.dp)
             .testTag(tag),
         shape = RoundedCornerShape(4.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
@@ -232,7 +238,7 @@ fun SystemButton(
     ) {
         Text(
             text = label,
-            fontSize = 10.sp,
+            fontSize = 10.5.sp,
             fontWeight = FontWeight.SemiBold,
             fontFamily = FontFamily.Monospace,
             color = TerminalAmber
@@ -250,7 +256,7 @@ fun ActionButton(
     Button(
         onClick = onClick,
         modifier = Modifier
-            .size(48.dp)
+            .size(40.dp)
             .testTag(tag),
         shape = CircleShape,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
@@ -267,7 +273,7 @@ fun ActionButton(
             Text(
                 text = label,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                fontSize = 11.5.sp,
                 fontFamily = FontFamily.Monospace,
                 color = TerminalAmber
             )
@@ -288,109 +294,137 @@ fun AnalogThumbstick(
     onPositionChanged: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val currentOnPositionChanged by rememberUpdatedState(onPositionChanged)
     var thumbOffset by remember { mutableStateOf(Offset.Zero) }
-    val baseRadius = 52f
-    val stickRadius = 24f
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
-            .size(108.dp)
+            .size(86.dp)
             .clip(CircleShape)
             .background(Color.Black)
-            .border(1.dp, TerminalCardBorder, CircleShape)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val dx = offset.x - center.x
-                        val dy = offset.y - center.y
-                        val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-                        val maxDist = baseRadius - stickRadius
-                        val clampedDist = dist.coerceAtMost(maxDist)
-                        val factor = if (dist > 0f) clampedDist / dist else 0f
-                        thumbOffset = Offset(dx * factor, dy * factor)
-                        val normX = (thumbOffset.x / maxDist).coerceIn(-1f, 1f)
-                        val normY = (thumbOffset.y / maxDist).coerceIn(-1f, 1f)
-                        onPositionChanged(normX, normY)
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        val newX = thumbOffset.x + dragAmount.x
-                        val newY = thumbOffset.y + dragAmount.y
-                        val dist = sqrt((newX * newX + newY * newY).toDouble()).toFloat()
-                        val maxDist = baseRadius - stickRadius
-                        val clampedDist = dist.coerceAtMost(maxDist)
-                        val factor = if (dist > 0f) clampedDist / dist else 0f
-                        thumbOffset = Offset(newX * factor, newY * factor)
-                        val normX = (thumbOffset.x / maxDist).coerceIn(-1f, 1f)
-                        val normY = (thumbOffset.y / maxDist).coerceIn(-1f, 1f)
-                        onPositionChanged(normX, normY)
-                    },
-                    onDragEnd = {
-                        thumbOffset = Offset.Zero
-                        onPositionChanged(0f, 0f)
-                    },
-                    onDragCancel = {
-                        thumbOffset = Offset.Zero
-                        onPositionChanged(0f, 0f)
-                    }
-                )
-            },
+            .border(1.dp, TerminalCardBorder, CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(108.dp)) {
-            val center = Offset(size.width / 2f, size.height / 2f)
+        val density = LocalDensity.current
+        val totalSizePx = with(density) { 86.dp.toPx() }
+        val baseRadius = totalSizePx * 0.44f
+        val stickRadius = totalSizePx * 0.20f
+        val maxDist = (baseRadius - stickRadius).coerceAtLeast(8f)
 
-            // Outer ring
-            drawCircle(
-                color = accentColor.copy(alpha = 0.4f),
-                radius = baseRadius,
-                center = center,
-                style = Stroke(width = 1.5f)
-            )
+        Box(
+            modifier = Modifier
+                .size(86.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val dx = offset.x - center.x
+                            val dy = offset.y - center.y
+                            val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                            if (dist > 0f) {
+                                val angle = atan2(dy.toDouble(), dx.toDouble())
+                                val visualDist = dist.coerceAtMost(maxDist)
+                                thumbOffset = Offset(
+                                    (visualDist * cos(angle)).toFloat(),
+                                    (visualDist * sin(angle)).toFloat()
+                                )
+                                val normDist = (dist / maxDist).coerceIn(0f, 1f)
+                                val normX = (normDist * cos(angle)).toFloat().coerceIn(-1f, 1f)
+                                val normY = (normDist * sin(angle)).toFloat().coerceIn(-1f, 1f)
+                                currentOnPositionChanged(normX, normY)
+                            } else {
+                                thumbOffset = Offset.Zero
+                                currentOnPositionChanged(0f, 0f)
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val dx = change.position.x - center.x
+                            val dy = change.position.y - center.y
+                            val dist = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                            if (dist > 0f) {
+                                val angle = atan2(dy.toDouble(), dx.toDouble())
+                                val visualDist = dist.coerceAtMost(maxDist)
+                                thumbOffset = Offset(
+                                    (visualDist * cos(angle)).toFloat(),
+                                    (visualDist * sin(angle)).toFloat()
+                                )
+                                val normDist = (dist / maxDist).coerceIn(0f, 1f)
+                                val normX = (normDist * cos(angle)).toFloat().coerceIn(-1f, 1f)
+                                val normY = (normDist * sin(angle)).toFloat().coerceIn(-1f, 1f)
+                                currentOnPositionChanged(normX, normY)
+                            } else {
+                                thumbOffset = Offset.Zero
+                                currentOnPositionChanged(0f, 0f)
+                            }
+                        },
+                        onDragEnd = {
+                            thumbOffset = Offset.Zero
+                            currentOnPositionChanged(0f, 0f)
+                        },
+                        onDragCancel = {
+                            thumbOffset = Offset.Zero
+                            currentOnPositionChanged(0f, 0f)
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(86.dp)) {
+                val center = Offset(size.width / 2f, size.height / 2f)
 
-            // Center deadzone ring
-            drawCircle(
-                color = accentColor.copy(alpha = 0.2f),
-                radius = baseRadius * 0.22f,
-                center = center,
-                style = Stroke(width = 1f)
-            )
+                // Outer ring
+                drawCircle(
+                    color = accentColor.copy(alpha = 0.4f),
+                    radius = baseRadius,
+                    center = center,
+                    style = Stroke(width = 1.5f)
+                )
 
-            // Crosshair
-            drawLine(
-                color = accentColor.copy(alpha = 0.25f),
-                start = Offset(center.x - baseRadius, center.y),
-                end = Offset(center.x + baseRadius, center.y),
-                strokeWidth = 1f
-            )
-            drawLine(
-                color = accentColor.copy(alpha = 0.25f),
-                start = Offset(center.x, center.y - baseRadius),
-                end = Offset(center.x, center.y + baseRadius),
-                strokeWidth = 1f
-            )
+                // Center deadzone ring
+                drawCircle(
+                    color = accentColor.copy(alpha = 0.2f),
+                    radius = baseRadius * 0.22f,
+                    center = center,
+                    style = Stroke(width = 1f)
+                )
 
-            // Thumb cap
-            val thumbCenter = Offset(center.x + thumbOffset.x, center.y + thumbOffset.y)
-            drawCircle(
-                color = Color.Black,
-                radius = stickRadius,
-                center = thumbCenter
-            )
-            drawCircle(
+                // Crosshair
+                drawLine(
+                    color = accentColor.copy(alpha = 0.25f),
+                    start = Offset(center.x - baseRadius, center.y),
+                    end = Offset(center.x + baseRadius, center.y),
+                    strokeWidth = 1f
+                )
+                drawLine(
+                    color = accentColor.copy(alpha = 0.25f),
+                    start = Offset(center.x, center.y - baseRadius),
+                    end = Offset(center.x, center.y + baseRadius),
+                    strokeWidth = 1f
+                )
+
+                // Thumb cap
+                val thumbCenter = Offset(center.x + thumbOffset.x, center.y + thumbOffset.y)
+                drawCircle(
+                    color = Color.Black,
+                    radius = stickRadius,
+                    center = thumbCenter
+                )
+                drawCircle(
+                    color = if (thumbOffset != Offset.Zero) TerminalGreen else accentColor,
+                    radius = stickRadius,
+                    center = thumbCenter,
+                    style = Stroke(width = 2f)
+                )
+            }
+            Text(
+                text = label,
+                fontWeight = FontWeight.Bold,
                 color = if (thumbOffset != Offset.Zero) TerminalGreen else accentColor,
-                radius = stickRadius,
-                center = thumbCenter,
-                style = Stroke(width = 2f)
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp
             )
         }
-        Text(
-            text = label,
-            fontWeight = FontWeight.Bold,
-            color = if (thumbOffset != Offset.Zero) TerminalGreen else accentColor,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp
-        )
     }
 }
