@@ -1,12 +1,13 @@
-##FLICKPAD##
+[ F L I C K P A D ]
 
 
-**What it is**
+**What is *FlickPad*?**
+
 Use your gamepad to input text, use macros, and control the cursor. Forget mouse and keyboard!
 
 Customize your layouts, adjust your settings, and save it all to a profile, then just press your shortcut and immediately start typing.
 
-**How it works**
+**How it works:**
 
 The keyboard layout is similar to MessagEase/ThumbKey/FlickBoard. 
 The left thumbstick chooses the zone from a 3x3 grid (8 directions + neutral), the right thumbstick chooses the character within it (8 directions). 
