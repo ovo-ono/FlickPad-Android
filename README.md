@@ -48,3 +48,4 @@ Individual thumbstick deadzones.
 
 And of course, you can save, import and export profiles in JSON format as much as you like!
 
+**AI NOTICE**: Unfortunately I've never learned to code, so this entire hunk o' junk is vibecoded with Gemini. 
